@@ -1582,6 +1582,33 @@ begin
   exact snorm_congr_ae (eventually_eq.sub eventually_eq.rfl (mem_ℒp.coe_fn_to_Lp f_lim_ℒp)),
 end
 
+lemma tendsto_zero_at_top_snorm_to_real {ι} [preorder ι] (f : ι → Lp E p μ) :
+  tendsto (λ n, (snorm (f n) p μ).to_real) at_top (𝓝 0)
+    ↔ tendsto (λ n, snorm (f n) p μ) at_top (𝓝 0) :=
+begin
+  split; intro h,
+  { have h_real : (λ n, snorm (f n) p μ) = λ n, ennreal.of_real (snorm (f n) p μ).to_real,
+      by { ext1 n, rw ennreal.of_real_to_real, exact Lp.snorm_ne_top _, },
+    simp_rw h_real,
+    rw ← ennreal.of_real_to_real ennreal.zero_ne_top,
+    refine ennreal.tendsto_of_real _,
+    rwa ennreal.zero_to_real, },
+  { rw ← ennreal.zero_to_real,
+    exact tendsto.comp (ennreal.tendsto_to_real ennreal.coe_ne_top) h, },
+end
+
+lemma cauchy_seq_Lp_iff_cauchy_seq_ℒp {ι} [nonempty ι] [semilattice_sup ι] [hp : fact (1 ≤ p)]
+  (f : ι → Lp E p μ) :
+  cauchy_seq f ↔ tendsto (λ (n : ι × ι), snorm (f n.fst - f n.snd) p μ) at_top (𝓝 0) :=
+begin
+  simp_rw [cauchy_seq_iff_tendsto_dist_at_top_0, dist_def],
+  have h_snorm_eq : ∀ n : ι × ι, snorm (⇑(f n.fst) - ⇑(f n.snd)) p μ
+      = snorm ⇑(f n.fst - f n.snd) p μ,
+    from λ n, snorm_congr_ae (Lp.coe_fn_sub _ _).symm,
+  simp_rw h_snorm_eq,
+  exact tendsto_zero_at_top_snorm_to_real (λ n : ι × ι, f n.fst - f n.snd),
+end
+
 lemma tendsto_Lp_of_tendsto_ℒp {ι} [preorder ι] [hp : fact (1 ≤ p)]
   {f : ι → Lp E p μ} (f_lim : α → E) (f_lim_ℒp : mem_ℒp f_lim p μ)
   (h_tendsto : at_top.tendsto (λ n, snorm (f n - f_lim) p μ) (𝓝 0)) :
