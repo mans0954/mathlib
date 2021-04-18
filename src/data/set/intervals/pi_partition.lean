@@ -141,34 +141,39 @@ by simp only [inf_boxes, mem_Union, mem_singleton_iff]
 instance : has_inf (pi_partition I) :=
 ⟨λ π π',
   { boxes := inf_boxes π π',
-    finite_boxes := finite_bUnion _,
-    le_total' := λ J'' hJ'',
+    finite_boxes := π.finite_boxes.bUnion $ λ J hJ, π'.finite_boxes.bUnion $
+      λ J hJ, finite_Union_Prop $ λ h, finite_singleton _,
+    bUnion_boxes_Ioc :=
       begin
-        rcases mem_inf_boxes'.1 hJ'' with ⟨J, hJ, J', hJ', h, rfl⟩,
-        rw partition_box.le_iff,
-        exact ⟨λ i, le_max_iff.2 (or.inl $ π.lower_le_lower hJ i),
-          λ i, min_le_iff.2 $ or.inl $ π.upper_le_upper hJ i⟩,
+        ext x,
+        simp only [mem_Union, exists_prop, mem_inf_boxes'],
+        refine ⟨_, λ H, _⟩,
+        { rintro ⟨_, ⟨J, hJ, J', hJ', h, rfl⟩, hx⟩,
+          simp only [partition_box.Ioc, mem_set_of_eq, mem_Ioc, max_lt_iff, le_min_iff] at hx,
+          refine π.le_of_mem hJ (λ i, ⟨(hx i).1.1, (hx i).2.1⟩) },
+        { rcases π.exists_unique H with ⟨J, ⟨hJ, hx, -⟩, -⟩,
+          rcases π'.exists_unique H with ⟨J', ⟨hJ', hx', -⟩, -⟩,
+          have : ∀ i, x i ∈ Ioc (max (J.lower i) (J'.lower i)) (min (J.upper i) (J'.upper i)),
+            from λ i, ⟨max_lt (hx i).1 (hx' i).1, le_min (hx i).2 (hx' i).2⟩,
+          exact ⟨_, ⟨J, hJ, J', hJ', λ i, (this i).1.trans_le (this i).2, rfl⟩, this⟩ }
       end,
-    exists_unique' := λ x hxI,
+    disjoint_Ioc :=-- λ J₁ hJ₁ J₂ hJ₂ hne x hx,
       begin
-        rcases (π.exists_unique hxI).exists2 with ⟨J, hJ, hx⟩,
-        rcases (π'.exists_unique hxI).exists2 with ⟨J', hJ', hx'⟩,
-        have A : ∀ i, x i ∈ Ioc (max (J.lower i) (J'.lower i)) (min (J.upper i) (J'.upper i)),
-          from λ i, ⟨max_lt (hx i).1 (hx' i).1, le_min (hx i).2 (hx' i).2⟩,
-        have B : ∀ i, _ < _ := λ i, (A i).1.trans_le (A i).2,
-        set J'' : partition_box ι := ⟨_, _, B⟩,
-        refine exists_unique.intro2 J'' _ A _; simp only [mem_inf_boxes'],
-        { refine ⟨J, hJ, J', hJ', B, rfl⟩ },
-        { rintros J₁'' ⟨J₁, hJ₁, J₁', hJ₁', h, rfl⟩ H,
-          simp only [mem_Ioc, partition_box.mem_mk, max_lt_iff, le_min_iff] at H,
-          obtain rfl : J = J₁, from π.eq_of_mem_of_mem hJ hJ₁ hx (λ i, ⟨(H i).1.1, (H i).2.1⟩),
-          obtain rfl : J' = J₁',
-            from π'.eq_of_mem_of_mem hJ' hJ₁' hx' (λ i, ⟨(H i).1.2, (H i).2.2⟩),
-          refl }
+        simp only [pairwise_on, mem_inf_boxes'],
+        rintro _ ⟨J₁, hJ₁, J₁', hJ₁', H₁, rfl⟩ _ ⟨J₂, hJ₂, J₂', hJ₂', H₂, rfl⟩ H x ⟨hx₁, hx₂⟩,
+        simp only [partition_box.Ioc, mem_set_of_eq, mem_Ioc, max_lt_iff, le_min_iff] at hx₁ hx₂,
+        obtain rfl : J₁ = J₂,
+          from π.eq_of_mem_Ioc hJ₁ hJ₂ (λ i, ⟨(hx₁ i).1.1, (hx₁ i).2.1⟩)
+            (λ i, ⟨(hx₂ i).1.1, (hx₂ i).2.1⟩),
+        obtain rfl : J₁' = J₂',
+          from π'.eq_of_mem_Ioc hJ₁' hJ₂' (λ i, ⟨(hx₁ i).1.2, (hx₁ i).2.2⟩)
+            (λ i, ⟨(hx₂ i).1.2, (hx₂ i).2.2⟩),
+        exact H rfl
       end }⟩
 
 lemma mem_inf_boxes {π π' : pi_partition I} {J'' : partition_box ι} :
-  J'' ∈ π ⊓ π' ↔ ∃ (J : partition_box ι) (hJ: J ∈ π) (J' : partition_box ι) (hJ' : J' ∈ π')
+  J'' ∈ (π ⊓ π').boxes ↔ ∃ (J : partition_box ι) (hJ: J ∈ π.boxes)
+    (J' : partition_box ι) (hJ' : J' ∈ π'.boxes)
     (h : ∀ i, max (J.lower i) (J'.lower i) < min (J.upper i) (J'.upper i)),
     J'' = ⟨_, _, h⟩ :=
 mem_inf_boxes'
@@ -176,24 +181,24 @@ mem_inf_boxes'
 instance : semilattice_inf_top (pi_partition I) :=
 { le := (≤),
   top := ⊤,
-  le_top := λ π J hJ, ⟨I, finset.mem_singleton_self _, π.le_total hJ⟩,
+  le_top := λ π J hJ, ⟨I, mem_singleton _, π.le_of_mem hJ⟩,
   inf := (⊓),
   inf_le_left := λ π π' J'' hJ'',
     begin
       rcases mem_inf_boxes.1 hJ'' with ⟨J, hJ, J', hJ', H, rfl⟩, clear hJ'',
-      exact ⟨J, hJ, partition_box.le_iff.2 ⟨λ i, le_max_left _ _, λ i, min_le_left _ _⟩⟩
+      exact ⟨J, hJ, partition_box.le_iff_bounds.2 ⟨λ i, le_max_left _ _, λ i, min_le_left _ _⟩⟩
     end,
   inf_le_right := λ π π' J'' hJ'',
     begin
       rcases mem_inf_boxes.1 hJ'' with ⟨J, hJ, J', hJ', H, rfl⟩, clear hJ'',
-      exact ⟨J', hJ', partition_box.le_iff.2 ⟨λ i, le_max_right _ _, λ i, min_le_right _ _⟩⟩
+      exact ⟨J', hJ', partition_box.le_iff_bounds.2 ⟨λ i, le_max_right _ _, λ i, min_le_right _ _⟩⟩
     end,
   le_inf := λ π π₁ π₂ h₁ h₂ J hJ,
     begin
       rcases h₁ hJ with ⟨J₁, mem₁, le₁⟩, rcases h₂ hJ with ⟨J₂, mem₂, le₂⟩,
       simp only [exists_prop, mem_inf_boxes],
       refine ⟨_, ⟨J₁, mem₁, J₂, mem₂, λ i, _, rfl⟩, _⟩;
-        simp only [partition_box.le_iff] at *,
+        simp only [partition_box.le_iff_bounds] at *,
       calc max (J₁.lower i) (J₂.lower i) ≤ J.lower i : max_le (le₁.1 i) (le₂.1 i)
       ... < J.upper i : J.lower_lt_upper i
       ... ≤ min (J₁.upper i) (J₂.upper i) : le_min (le₁.2 i) (le₂.2 i),
@@ -201,34 +206,53 @@ instance : semilattice_inf_top (pi_partition I) :=
     end,
   .. pi_partition.partial_order }
 
-private def split_each_boxes (πi : Π J ∈ π, pi_partition J) : finset (partition_box ι) :=
-π.boxes.attach.bUnion (λ J, (πi J J.2).boxes)
-
-private lemma mem_split_each_boxes' {πi : Π J ∈ π, pi_partition J} :
-  J ∈ split_each_boxes π πi ↔ ∃ J' ∈ π, J ∈ πi J' ‹_› :=
-by { simp [split_each_boxes], refl }
-
-def split_each (πi : Π J ∈ π, pi_partition J) : pi_partition I :=
-{ boxes := split_each_boxes π πi,
-  le_total' := λ J hJ, let ⟨I, hI, hJI⟩ := (mem_split_each_boxes' π).1 hJ in
-    ((πi I hI).le_total hJI).trans (π.le_total hI),
-  exists_unique' := λ x hx,
+def split_each (πi : Π J ∈ π.boxes, pi_partition J) : pi_partition I :=
+{ boxes := ⋃ J ∈ π.boxes, (πi J ‹J ∈ π.boxes›).boxes,
+  finite_boxes := π.finite_boxes.bUnion $ λ J hJ, (πi J hJ).finite_boxes,
+  bUnion_boxes_Ioc := by simp only [bUnion_Union, pi_partition.bUnion_boxes_Ioc],
+  disjoint_Ioc :=
     begin
-      rcases π.exists_mem hx with ⟨J, hJ, hxJ⟩,
-      rcases (πi J hJ).exists_mem hxJ with ⟨J', hJ', hxJ'⟩,
-      refine exists_unique.intro2 J' ((mem_split_each_boxes' π).2 ⟨J, hJ, hJ'⟩) hxJ' _,
-      simp only [mem_split_each_boxes'],
-      rintro J₁' ⟨J₁, hJ₁, hJ₁'⟩ hxJ₁',
-      obtain rfl : J = J₁, from π.eq_of_mem_of_mem hJ hJ₁ hxJ ((πi J₁ hJ₁).le_total hJ₁' hxJ₁'),
-      exact (πi J hJ).eq_of_mem_of_mem hJ₁' hJ' hxJ₁' hxJ'
+      simp only [pairwise_on, mem_Union],
+      rintro J₁' ⟨J₁, hJ₁, hJ₁'⟩ J₂' ⟨J₂, hJ₂, hJ₂'⟩ Hne x ⟨hx₁, hx₂⟩, apply Hne,
+      obtain rfl : J₁ = J₂,
+        from π.eq_of_mem_Ioc hJ₁ hJ₂ ((πi J₁ hJ₁).le_of_mem hJ₁' hx₁)
+          ((πi J₂ hJ₂).le_of_mem hJ₂' hx₂),
+      obtain rfl : hJ₁ = hJ₂ := rfl,
+      exact (πi J₁ hJ₁).eq_of_mem_Ioc hJ₁' hJ₂' hx₁ hx₂
     end }
 
-lemma mem_split_each_boxes {πi : Π J ∈ π, pi_partition J} :
-  J ∈ split_each π πi ↔ ∃ J' ∈ π, J ∈ πi J' ‹_› :=
-mem_split_each_boxes' π
+lemma mem_split_each_boxes {πi : Π J ∈ π.boxes, pi_partition J} :
+  J ∈ (split_each π πi).boxes ↔ ∃ J' ∈ π.boxes, J ∈ (πi J' ‹J' ∈ π.boxes›).boxes :=
+by simp only [split_each, mem_Union]
+
+def split_each_axis [fintype ι] (π : pi_partition I) (s : ι → set ℝ) (hs : ∀ i, finite (s i)) :
+  pi_partition I :=
+{ boxes := ⋃ (L ∈ pi univ (λ i, 𝒫 (s i)))
+    (H : ∀ i, Sup (insert (I.lower i) (L i)) < Inf (insert (I.upper i) (s i \ L i))), {⟨_, _, H⟩},
+  finite_boxes := (finite.pi $ λ i, (hs i).finite_subsets).bUnion $ λ L hL,
+    finite_Union_Prop $ λ H, finite_singleton _,
+  bUnion_boxes_Ioc :=
+    begin
+      have : ∀ (L ∈ pi univ (λ i, 𝒫 (s i))) i, finite (L i),
+        from λ L hL i, (hs i).subset (hL i trivial),
+      ext x,
+      simp only [mem_Union, exists_prop, mem_singleton_iff],
+      refine ⟨_, λ hx, _⟩,
+      { rintro ⟨J, ⟨L, hL, Hlt, rfl⟩, hx⟩ i,
+        have hf : finite (insert _ (L i)) := ((hs i).subset (hL i trivial)).insert _,
+        have hf' : finite (insert _ (s i \ L i)) := ((hs i).subset (diff_subset _ _)).insert _,
+        exact ⟨(le_cSup hf.bdd_above (mem_insert _ _)).trans_lt (hx i).1,
+          (hx i).2.trans (cInf_le hf'.bdd_below (mem_insert _ _))⟩ },
+      { set L : ι → set ℝ := λ i, s i ∩ Iio (x i),
+        have : ∀ i, x i ∈ Ioc (Sup (insert (I.lower i) (L i)))
+          (Inf (insert (I.upper i) (s i \ L i))),
+        {  },
+        refine ⟨_, ⟨L, λ i _, inter_subset_left _ _, _, rfl⟩, _⟩, }
+    end
+}
 
 def is_homothetic (π : pi_partition I) : Prop :=
-∀ (J ∈ π), ∃ ε : ℝ, (J : partition_box ι).upper - J.lower = ε • (I.upper - I.lower)
+∀ (J ∈ π.boxes), ∃ ε : ℝ, (J : partition_box ι).upper - J.lower = ε • (I.upper - I.lower)
 
 end pi_partition
 

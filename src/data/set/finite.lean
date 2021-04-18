@@ -434,6 +434,10 @@ theorem finite.bUnion {α} {ι : Type*} {s : set ι} {f : Π i ∈ s, set α} :
   finite s → (∀ i ∈ s, finite (f i ‹_›)) → finite (⋃ i∈s, f i ‹_›)
 | ⟨hs⟩ h := by rw [bUnion_eq_Union]; exactI finite_Union (λ i, h _ _)
 
+theorem finite_Union_Prop {p : Prop} {f : p → set α} (hf : ∀ h, finite (f h)) :
+  finite (⋃ h : p, f h) :=
+by by_cases p; simp *
+
 instance fintype_lt_nat (n : ℕ) : fintype {i | i < n} :=
 fintype.of_finset (finset.range n) $ by simp
 

@@ -614,6 +614,10 @@ lemma sUnion_inter_sUnion {s t : set (set α)} :
   (⋃₀s) ∩ (⋃₀t) = (⋃p ∈ s.prod t, (p : (set α) × (set α )).1 ∩ p.2) :=
 Sup_inf_Sup
 
+lemma bUnion_Union (s : ι → set α) (t : α → set β) :
+  (⋃ x ∈ ⋃ i, s i, t x) = ⋃ i (x ∈ s i), t x :=
+by simpa [Union] using supr_comm
+
 /-- If `S` is a set of sets, and each `s ∈ S` can be represented as an intersection
 of sets `T s hs`, then `⋂₀ S` is the intersection of the union of all `T s hs`. -/
 lemma sInter_bUnion {S : set (set α)} {T : Π s ∈ S, set (set α)} (hT : ∀s∈S, s = ⋂₀ T s ‹s ∈ S›) :
