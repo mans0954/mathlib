@@ -216,7 +216,7 @@ variables {M : Type*} {N : Type*} {P : Type*} {Q : Type*} {S : Type*}
 variables [add_comm_monoid M] [add_comm_monoid N] [add_comm_monoid P] [add_comm_monoid Q]
   [add_comm_monoid S]
 variables [semimodule R M] [semimodule R N] [semimodule R P] [semimodule R Q] [semimodule R S]
-variables [semimodule R' M] [semimodule R' N]
+variables [semimodule R' N]
 include R
 
 variables (M N)
@@ -303,8 +303,7 @@ eq.symm $ quotient.sound' $ add_con_gen.rel.of _ _ $ eqv.of_add_right _ _ _
 
 section
 
-variables (R R' M N)
-
+variables (R R' M N) [semimodule R' M]
 /--
 A typeclass for `has_scalar` structures which can be moved across a tensor product.
 
@@ -320,6 +319,9 @@ class compatible_smul :=
 (smul_tmul : ∀ (r : R') (m : M) (n : N), (r • m) ⊗ₜ n = m ⊗ₜ[R] (r • n))
 
 end
+
+section compatible_smul
+variables [semimodule R' M]
 
 /-- Note that this provides the default `compatible_smul R R M N` instance through
 `mul_action.is_scalar_tower.left`. -/
@@ -339,31 +341,31 @@ lemma smul_tmul [compatible_smul R R' M N] (r : R') (m : M) (n : N) :
   (r • m) ⊗ₜ n = m ⊗ₜ[R] (r • n) :=
 compatible_smul.smul_tmul _ _ _
 
-/-- Auxiliary function to defining scalar multiplication on tensor product. -/
-def smul.aux {R' : Type*} [has_scalar R' M] (r : R') : free_add_monoid (M × N) →+ M ⊗[R] N :=
-free_add_monoid.lift $ λ p : M × N, (r • p.1) ⊗ₜ p.2
+end compatible_smul
 
-theorem smul.aux_of {R' : Type*} [has_scalar R' M] (r : R') (m : M) (n : N) :
-  smul.aux r (free_add_monoid.of (m, n)) = (r • m) ⊗ₜ[R] n :=
+/-- Auxiliary function to defining scalar multiplication on tensor product. -/
+def smul.aux {R' : Type*} [has_scalar R' N] (r : R') : free_add_monoid (M × N) →+ M ⊗[R] N :=
+free_add_monoid.lift $ λ p : M × N, p.1 ⊗ₜ (r • p.2)
+
+theorem smul.aux_of {R' : Type*} [has_scalar R' N] (r : R') (m : M) (n : N) :
+  smul.aux r (free_add_monoid.of (m, n)) = m ⊗ₜ[R] ( r • n) :=
 rfl
 
-variables [smul_comm_class R R' M] [smul_comm_class R R' N]
+variables [smul_comm_class R R' N]
 
 -- Most of the time we want the instance below this one, which is easier for typeclass resolution
--- to find. The `unused_arguments` is from one of the two comm_classes - while we only make use
--- of one, it makes sense to make the API symmetric.
-@[nolint unused_arguments]
+-- to find.
 instance has_scalar' : has_scalar R' (M ⊗[R] N) :=
 ⟨λ r, (add_con_gen (tensor_product.eqv R M N)).lift (smul.aux r : _ →+ M ⊗[R] N) $
 add_con.add_con_gen_le $ λ x y hxy, match x, y, hxy with
 | _, _, (eqv.of_zero_left n)       := (add_con.ker_rel _).2 $
-    by simp_rw [add_monoid_hom.map_zero, smul.aux_of, smul_zero, zero_tmul]
+    by simp_rw [add_monoid_hom.map_zero, smul.aux_of, zero_tmul]
 | _, _, (eqv.of_zero_right m)      := (add_con.ker_rel _).2 $
-    by simp_rw [add_monoid_hom.map_zero, smul.aux_of, tmul_zero]
+    by simp_rw [add_monoid_hom.map_zero, smul.aux_of, smul_zero, tmul_zero]
 | _, _, (eqv.of_add_left m₁ m₂ n)  := (add_con.ker_rel _).2 $
-    by simp_rw [add_monoid_hom.map_add, smul.aux_of, smul_add, add_tmul]
+    by simp_rw [add_monoid_hom.map_add, smul.aux_of, add_tmul]
 | _, _, (eqv.of_add_right m n₁ n₂) := (add_con.ker_rel _).2 $
-    by simp_rw [add_monoid_hom.map_add, smul.aux_of, tmul_add]
+    by simp_rw [add_monoid_hom.map_add, smul.aux_of, smul_add, tmul_add]
 | _, _, (eqv.of_smul s m n)        := (add_con.ker_rel _).2 $
     by rw [smul.aux_of, smul.aux_of, ←smul_comm, smul_tmul]
 | _, _, (eqv.add_comm x y)         := (add_con.ker_rel _).2 $
@@ -382,7 +384,7 @@ add_monoid_hom.map_add _ _ _
 -- Most of the time we want the instance below this one, which is easier for typeclass resolution
 -- to find.
 instance semimodule' : semimodule R' (M ⊗[R] N) :=
-have ∀ (r : R') (m : M) (n : N), r • (m ⊗ₜ[R] n) = (r • m) ⊗ₜ n := λ _ _ _, rfl,
+have ∀ (r : R') (m : M) (n : N), r • (m ⊗ₜ[R] n) = m ⊗ₜ (r • n) := λ _ _ _, rfl,
 { smul := (•),
   smul_add := λ r x y, tensor_product.smul_add r x y,
   mul_smul := λ r s x, tensor_product.induction_on x
@@ -395,26 +397,28 @@ have ∀ (r : R') (m : M) (n : N), r • (m ⊗ₜ[R] n) = (r • m) ⊗ₜ n :=
     (λ x y ihx ihy, by rw [tensor_product.smul_add, ihx, ihy]),
   add_smul := λ r s x, tensor_product.induction_on x
     (by simp_rw [tensor_product.smul_zero, add_zero])
-    (λ m n, by simp_rw [this, add_smul, add_tmul])
+    (λ m n, by simp_rw [this, add_smul, tmul_add])
     (λ x y ihx ihy, by { simp_rw tensor_product.smul_add, rw [ihx, ihy, add_add_add_comm] }),
   smul_zero := λ r, tensor_product.smul_zero r,
   zero_smul := λ x, tensor_product.induction_on x
     (by rw tensor_product.smul_zero)
-    (λ m n, by rw [this, zero_smul, zero_tmul])
+    (λ m n, by rw [this, zero_smul, tmul_zero])
     (λ x y ihx ihy, by rw [tensor_product.smul_add, ihx, ihy, add_zero]) }
 
 instance : semimodule R (M ⊗[R] N) := tensor_product.semimodule'
 
--- note that we don't actually need `compatible_smul` here, but we include it for symmetry
--- with `tmul_smul` to avoid exposing our asymmetric definition.
-@[nolint unused_arguments]
-theorem smul_tmul' [compatible_smul R R' M N] (r : R') (m : M) (n : N) :
-  r • (m ⊗ₜ[R] n) = (r • m) ⊗ₜ n :=
+@[simp] lemma tmul_smul (r : R') (x : M) (y : N) :
+  x ⊗ₜ (r • y) = r • (x ⊗ₜ[R] y) :=
 rfl
 
-@[simp] lemma tmul_smul [compatible_smul R R' M N] (r : R') (x : M) (y : N) :
-  x ⊗ₜ (r • y) = r • (x ⊗ₜ[R] y) :=
-(smul_tmul _ _ _).symm
+section compatible_smul
+variables [semimodule R' M]
+
+theorem smul_tmul' [compatible_smul R R' M N] (r : R') (m : M) (n : N) :
+  r • (m ⊗ₜ[R] n) = (r • m) ⊗ₜ n :=
+by rw [← tmul_smul, smul_tmul]
+
+end compatible_smul
 
 variables (R M N)
 /-- The canonical bilinear map `M → N → M ⊗[R] N`. -/
