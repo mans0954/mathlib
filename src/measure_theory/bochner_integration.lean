@@ -6,6 +6,7 @@ Authors: Zhouhang Zhou, Yury Kudryashov, Sébastien Gouëzel
 import measure_theory.simple_func_dense
 import analysis.normed_space.bounded_linear_maps
 import measure_theory.l1_space
+import measure_theory.temp_before_bochner
 import measure_theory.group
 import topology.sequences
 
@@ -541,40 +542,780 @@ by simp [to_L1, integrable.norm_to_L1]
 
 end to_L1
 
+@[ext] lemma ext [measurable_space α] {μ : measure α} {f g : α →₁ₛ[μ] E} :
+  ⇑f =ᵐ[μ] g → f = g :=
+by { intro h, ext1, ext1, rwa [coe_coe, coe_coe], }
+
+section indicator_L1s
+
+variables {s t : set α} {hs : measurable_set s}
+  {c : E} {hμsc : c = 0 ∨ μ s < ∞}
+
+lemma is_simple_func_indicator_ae (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞) :
+  ∃ (s : α →ₛ E), (ae_eq_fun.mk s s.ae_measurable : α →ₘ[μ] E)
+    = indicator_Lp 1 hs c hμsc :=
+begin
+  refine ⟨indicator_simple_func hs c, ae_eq_fun.ext ((ae_eq_fun.coe_fn_mk _ _).trans _)⟩,
+  rw indicator_simple_func_coe,
+  exact (indicator_Lp_coe_fn 1 _ _ _).symm,
+end
+
+/-- Indicator of a set as a `L1.simple_func`. -/
+def indicator_L1s (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞) : α →₁ₛ[μ] E :=
+⟨indicator_Lp 1 hs c hμsc, is_simple_func_indicator_ae hs c hμsc⟩
+
+lemma indicator_L1s_coe : (indicator_L1s hs c hμsc : α →₁[μ] E) = indicator_Lp 1 hs c hμsc := rfl
+
+lemma indicator_L1s_coe_fn : ⇑(indicator_L1s hs c hμsc) =ᵐ[μ] s.indicator (λ _, c) :=
+by { rw [(coe_coe _).symm, indicator_L1s_coe],
+  exact indicator_Lp_coe_fn 1 hs c hμsc, }
+
+lemma set.indicator_congr_ae {γ} {s t : set α} (hst : s =ᵐ[μ] t) {f : α → γ} [has_zero γ] :
+  s.indicator f =ᵐ[μ] t.indicator f :=
+begin
+  refine hst.mono (λ x hx, _),
+  rw [← @set.mem_def _ x s, ← @set.mem_def _ x t, eq_iff_iff] at hx,
+  by_cases hxs : x ∈ s,
+  { simp [hxs, hx.mp hxs], },
+  { have hxt : x ∉ t, from not_imp_not.mpr hx.mpr hxs,
+    simp [hxs, hxt], },
+end
+
+lemma indicator_L1s_congr_ae (hs : measurable_set s) (ht : measurable_set t)
+  (c : E) (hμsc : c = 0 ∨ μ s < ∞) (hμtc : c = 0 ∨ μ t < ∞) (hst : s =ᵐ[μ] t) :
+  indicator_L1s hs c hμsc = indicator_L1s ht c hμtc :=
+begin
+  ext1,
+  refine indicator_L1s_coe_fn.trans (eventually_eq.trans _ indicator_L1s_coe_fn.symm),
+  exact set.indicator_congr_ae hst,
+end
+
+lemma indicator_L1s_zero (μ : measure α) (hs : measurable_set s) :
+  @indicator_L1s _ E _ _ _ _ _ μ s hs (0 : E) (or.inl rfl) = 0 :=
+begin
+  ext1,
+  refine indicator_L1s_coe_fn.trans _,
+  rw [← coe_coe, coe_zero],
+  refine (Lp.coe_fn_zero E 1 μ).mono (λ x hx, _),
+  rw hx,
+  simp,
+end
+
+lemma indicator_L1s_measure_zero (hs : measurable_set s) (hμs : μ s = 0) (c : E) :
+  indicator_L1s hs c (or.inr (hμs.le.trans_lt ennreal.coe_lt_top)) = 0 :=
+begin
+  by_cases hc : c = 0,
+  { rw hc, exact indicator_L1s_zero μ hs, },
+  ext1,
+  refine indicator_L1s_coe_fn.trans _,
+  rw [← coe_coe, coe_zero],
+  refine eventually_eq.trans _ (Lp.coe_fn_zero _ _ _).symm,
+  rw [eventually_eq, ae_iff],
+  simp [hc, hμs],
+end
+
+lemma indicator_L1s_empty (c : E) :
+  indicator_L1s measurable_set.empty c (or.inr ((measure_empty).le.trans_lt ennreal.coe_lt_top))
+    = (0 : α →₁ₛ[μ] E) :=
+begin
+  ext1,
+  refine indicator_L1s_coe_fn.trans _,
+  rw [set.indicator_empty, ← coe_coe, coe_zero],
+  exact (Lp.coe_fn_zero _ _ _).symm,
+end
+
+lemma indicator_L1s_set_measure_zero (hμs : μ s = 0) (c : E) :
+  indicator_L1s hs c (or.inr (hμs.le.trans_lt ennreal.coe_lt_top)) = (0 : α →₁ₛ[μ] E) :=
+begin
+  have hs_empty : s =ᵐ[μ] (∅ : set α), from ae_eq_empty.mpr hμs,
+  rw indicator_L1s_congr_ae hs measurable_set.empty c
+    (or.inr (hμs.le.trans_lt ennreal.coe_lt_top))
+    (or.inr ((measure_empty).le.trans_lt ennreal.coe_lt_top)) hs_empty,
+  exact indicator_L1s_empty c,
+end
+
+lemma coe_fn_add (f g : α →₁ₛ[μ] E) : ⇑(f + g) =ᵐ[μ] f + g :=
+begin
+  rw [← coe_coe, coe_add],
+  refine (Lp.coe_fn_add _ _).trans _,
+  rw [coe_coe, coe_coe],
+end
+
+lemma indicator_L1s_add_same {s : set α} (hs : measurable_set s) (hμs : μ s < ∞) (c₁ c₂ : E) :
+  indicator_L1s hs c₁ (or.inr hμs) + indicator_L1s hs c₂ (or.inr hμs)
+    = indicator_L1s hs (c₁ + c₂) (or.inr hμs) :=
+begin
+  ext1,
+  refine (coe_fn_add _ _).trans _,
+  refine ((eventually_eq.add indicator_L1s_coe_fn
+    indicator_L1s_coe_fn).trans _).trans indicator_L1s_coe_fn.symm,
+  rw [eventually_eq],
+  refine eventually_of_forall (λ x, _),
+  rw set.indicator_add,
+end
+
+lemma indicator_L1s_add_of_disjoint_of_eq {s t : set α} (hs : measurable_set s) (hμs : μ s < ∞)
+  (ht : measurable_set t) (hμt : μ t < ∞) (hst_disjoint : disjoint s t) (c : E) :
+indicator_L1s hs c (or.inr hμs) + indicator_L1s ht c (or.inr hμt)
+  = indicator_L1s (hs.union ht) c
+    (or.inr ((measure_union_le s t).trans_lt (ennreal.add_lt_top.mpr ⟨hμs, hμt⟩))) :=
+begin
+  ext1,
+  refine (coe_fn_add _ _).trans _,
+  refine ((eventually_eq.add indicator_L1s_coe_fn
+    indicator_L1s_coe_fn).trans _).trans indicator_L1s_coe_fn.symm,
+  rw [eventually_eq],
+  refine eventually_of_forall (λ x, _),
+  rw set.indicator_union_of_disjoint hst_disjoint,
+end
+
+lemma indicator_L1s_add_eq_add_diff_inter {s t : set α} (hs : measurable_set s) (hμs : μ s < ∞)
+  (ht : measurable_set t) (hμt : μ t < ∞) (cs ct : E) :
+  indicator_L1s hs cs (or.inr hμs) + indicator_L1s ht ct (or.inr hμt)
+    = indicator_L1s (hs.diff ht) cs
+      (or.inr ((measure_mono (set.diff_subset s t)).trans_lt hμs))
+    + indicator_L1s (ht.diff hs) ct
+      (or.inr ((measure_mono (set.diff_subset t s)).trans_lt hμt))
+    + indicator_L1s (hs.inter ht) (cs + ct)
+      (or.inr ((measure_mono (set.inter_subset_left s t)).trans_lt hμs)) :=
+begin
+  ext1,
+  refine (coe_fn_add _ _).trans _,
+  refine (eventually_eq.add indicator_L1s_coe_fn indicator_L1s_coe_fn).trans _,
+  refine eventually_eq.trans _ (coe_fn_add _ _).symm,
+  refine eventually_eq.trans _ (eventually_eq.add (coe_fn_add _ _) indicator_L1s_coe_fn).symm,
+  refine eventually_eq.trans _ (eventually_eq.add (eventually_eq.add
+    indicator_L1s_coe_fn indicator_L1s_coe_fn).symm eventually_eq.rfl),
+  rw [eventually_eq],
+  refine eventually_of_forall (λ x, _),
+  rw set.indicator_add,
+  dsimp only,
+  by_cases hx_s : x ∈ s; by_cases hx_t : x ∈ t,
+  { have hx_diff1 : x ∉ s \ t, by { rw set.mem_diff, push_neg, intro h, exact hx_t, },
+    have hx_diff2 : x ∉ t \ s, by { rw set.mem_diff, push_neg, intro h, exact hx_s, },
+    have hx_inter : x ∈ s ∩ t, from set.mem_inter hx_s hx_t,
+    simp [hx_inter, hx_s, hx_t, hx_diff1, hx_diff2], },
+  { have hx_diff1 : x ∈ s \ t, by { rw set.mem_diff, exact ⟨hx_s, hx_t⟩, },
+    have hx_diff2 : x ∉ t \ s, by { rw set.mem_diff, push_neg, intro h, exact hx_s, },
+    have hx_inter : x ∉ s ∩ t, by { rw set.mem_inter_iff, push_neg, intro h, exact hx_t, },
+    simp [hx_inter, hx_s, hx_t, hx_diff1, hx_diff2], },
+  { have hx_diff1 : x ∉ s \ t, by { rw set.mem_diff, push_neg, intro h, exact hx_t, },
+    have hx_diff2 : x ∈ t \ s, by { rw set.mem_diff, exact ⟨hx_t, hx_s⟩, },
+    have hx_inter : x ∉ s ∩ t, by { rw set.mem_inter_iff, push_neg, intro h, exact absurd h hx_s, },
+    simp [hx_inter, hx_s, hx_t, hx_diff1, hx_diff2], },
+  { have hx_diff1 : x ∉ s \ t, by { rw set.mem_diff, push_neg, intro h, exact absurd h hx_s, },
+    have hx_diff2 : x ∉ t \ s, by { rw set.mem_diff, push_neg, intro h, exact absurd h hx_t, },
+    have hx_inter : x ∉ s ∩ t, by { rw set.mem_inter_iff, push_neg, intro h, exact hx_t, },
+    simp [hx_inter, hx_s, hx_t, hx_diff1, hx_diff2], },
+end
+
+lemma indicator_L1s_add_subset_eq_add_diff_inter {s t : set α} (hs : measurable_set s)
+  (hμs : μ s < ∞) (ht : measurable_set t) (hμt : μ t < ∞) (cs ct : E) (hst : s ⊆ t) :
+  indicator_L1s hs cs (or.inr hμs) + indicator_L1s ht ct (or.inr hμt)
+    = indicator_L1s (ht.diff hs) ct
+      (or.inr ((measure_mono (set.diff_subset t s)).trans_lt hμt))
+    + indicator_L1s (hs.inter ht) (cs + ct)
+      (or.inr ((measure_mono (set.inter_subset_left s t)).trans_lt hμs)) :=
+begin
+  rw indicator_L1s_add_eq_add_diff_inter hs hμs ht hμt cs ct,
+  suffices h_eq_zero : indicator_L1s (hs.diff ht) cs
+    (or.inr ((measure_mono (set.diff_subset s t)).trans_lt hμs)) = 0,
+  { rw h_eq_zero, abel, },
+  have hst_zero : s \ t = ∅, from diff_eq_empty.mpr hst,
+  refine indicator_L1s_measure_zero (hs.diff ht) _ cs,
+  rw hst_zero,
+  exact measure_empty,
+end
+
+end indicator_L1s
+
 section to_simple_func
 
+lemma simple_func.exists_range_measure_nonzero (g : α →ₛ E) (hμ : μ ≠ 0) :
+  ∃ y ∈ g.range, μ (g ⁻¹' {y}) ≠ 0 :=
+begin
+  by_contra hμg_zero,
+  push_neg at hμg_zero,
+  have hg_univ : ∑ y in g.range, μ (g ⁻¹' {y}) = μ set.univ,
+    from simple_func.sum_range_measure_preimage_singleton g μ,
+  have h_univ : 0 < μ set.univ,
+  { refine lt_of_le_of_ne (zero_le _) (ne.symm _),
+    exact λ hμ0, hμ (measure.measure_univ_eq_zero.mp hμ0), },
+  have hg_sum_zero : ∑ y in g.range, μ (g ⁻¹' {y}) = ∑ y in g.range, 0,
+    from finset.sum_congr rfl hμg_zero,
+  rw [hg_sum_zero, finset.sum_const_zero] at hg_univ,
+  exact h_univ.ne hg_univ,
+end
+
+lemma preimage_congr_ae {γ} {f g : α → γ} (hfg : f =ᵐ[μ] g) (s : set γ) :
+  f ⁻¹' s =ᵐ[μ] g ⁻¹' s :=
+begin
+  refine hfg.mono (λ x hx, _),
+  rw [← @set.mem_def _ x (f ⁻¹' s), ← @set.mem_def _ x (g ⁻¹' s), set.mem_preimage,
+    set.mem_preimage, eq_iff_iff, hx],
+end
+
+lemma preimage_ae_eq_mk (f : α →₁ₛ[μ] E) (g : α →ₛ E)
+  (hfg : (ae_eq_fun.mk g g.ae_measurable : α →ₘ[μ] E) = f.val) (y : E) :
+  f ⁻¹' {y} =ᵐ[μ] g ⁻¹' {y} :=
+begin
+  refine preimage_congr_ae _ {y},
+  rw ae_eq_fun.ext_iff at hfg,
+  refine eventually_eq.trans _ (ae_eq_fun.coe_fn_mk g g.ae_measurable),
+  refine eventually_eq.trans _ hfg.symm,
+  refl,
+end
+
+/-- This definition should not be used except in this file. `to_simple_func` gives another simple
+func equal to `f` with much nicer properties. -/
+def some_simple_func (f : α →₁ₛ[μ] E) : α →ₛ E := f.prop.some
+
+lemma some_simple_func_mk_eq_fun (f : α →₁ₛ[μ] E) :
+  (ae_eq_fun.mk (some_simple_func f) (some_simple_func f).ae_measurable : α →ₘ[μ] E) = f :=
+f.prop.some_spec
+
+lemma integrable_some_simple_func (f : α →₁ₛ[μ] E) :
+  integrable (some_simple_func f) μ :=
+begin
+  have hgf := some_simple_func_mk_eq_fun f,
+  refine (integrable_congr _).mp (L1.integrable f),
+  rw ae_eq_fun.ext_iff at hgf,
+  refine eventually_eq.trans _
+    (ae_eq_fun.coe_fn_mk (some_simple_func f) (some_simple_func f).ae_measurable),
+  refine eventually_eq.trans _ hgf.symm,
+  refl,
+end
+
+lemma some_simple_func_eq_fun (f : α →₁ₛ[μ] E) : some_simple_func f =ᵐ[μ] f :=
+begin
+  rw [← mk_eq_mk, some_simple_func_mk_eq_fun f, ← ae_eq_fun.mk_coe_fn ↑f],
+  { congr, },
+  { exact Lp.ae_measurable _, },
+end
+
+lemma finite_fiber (f : α →₁ₛ[μ] E) (y : E) (hy : y ≠ 0) :
+  μ (f ⁻¹' {y}) < ∞ :=
+begin
+  rw measure_congr (preimage_congr_ae (some_simple_func_eq_fun f).symm _),
+  exact simple_func.finite_fiber (some_simple_func f) (integrable_some_simple_func f) y hy,
+end
+
+lemma zero_or_finite_fiber (f : α →₁ₛ[μ] E) (y : E) :
+  y = 0 ∨ μ (f ⁻¹' {y}) < ∞ :=
+begin
+  by_cases hy : y = 0,
+  { exact or.inl hy, },
+  { exact or.inr (finite_fiber f y hy), },
+end
+
+def range_nonzero (f : α →₁ₛ[μ] E) : finset E :=
+finset.filter (λ y, y ≠ 0 ∧ μ (f ⁻¹' {y}) ≠ 0) f.prop.some.range
+
+lemma range_nonzero_def (f : α →₁ₛ[μ] E) :
+  range_nonzero f = finset.filter (λ y, y ≠ 0 ∧ μ (f ⁻¹' {y}) ≠ 0) f.prop.some.range :=
+rfl
+
+lemma ne_zero_of_mem_range_nonzero (f : α →₁ₛ[μ] E) (y : E) (hy : y ∈ range_nonzero f) :
+  y ≠ 0 :=
+by { rw [range_nonzero_def, finset.mem_filter] at hy, exact hy.2.1, }
+
+lemma measure_ne_zero_of_mem_range_nonzero (f : α →₁ₛ[μ] E) (y : E) (hy : y ∈ range_nonzero f) :
+  μ (f ⁻¹' {y}) ≠ 0 :=
+by { rw [range_nonzero_def, finset.mem_filter] at hy, exact hy.2.2, }
+
+lemma mem_range_nonzero_iff (f : α →₁ₛ[μ] E) (y : E) :
+  y ∈ range_nonzero f ↔ y ≠ 0 ∧ μ (f ⁻¹' {y}) ≠ 0 :=
+begin
+  split; intro hy,
+  { split,
+    { exact ne_zero_of_mem_range_nonzero f y hy, },
+    { exact measure_ne_zero_of_mem_range_nonzero f y hy, }, },
+  { rw [range_nonzero_def, finset.mem_filter],
+    refine ⟨@simple_func.mem_range_of_measure_ne_zero _ _ _ _ _ μ _, hy⟩,
+    change μ ((some_simple_func f) ⁻¹' {y}) ≠ 0,
+    rw measure_congr (preimage_congr_ae (some_simple_func_eq_fun f) {y}),
+    exact hy.2, },
+end
+
+lemma range_nonzero_subset_range_some_simple_func (f : α →₁ₛ[μ] E) :
+  range_nonzero f ⊆ (some_simple_func f).range :=
+begin
+  intros y hy,
+  refine @simple_func.mem_range_of_measure_ne_zero _ _ _ _ _ μ _,
+  rw measure_congr (preimage_congr_ae (some_simple_func_eq_fun f) _),
+  exact measure_ne_zero_of_mem_range_nonzero f y hy,
+end
+
+lemma zero_coe_fn : ⇑(0 : α →₁ₛ[μ] E) =ᵐ[μ] 0 :=
+by { rw [← coe_coe, coe_zero], exact Lp.coe_fn_zero E 1 μ, }
+
+lemma range_nonzero_zero : range_nonzero (0 : α →₁ₛ[μ] E) = ∅ :=
+begin
+  ext1 y,
+  simp only [finset.not_mem_empty, iff_false],
+  intro hy,
+  have h_meas := measure_ne_zero_of_mem_range_nonzero _ _ hy,
+  have h_ne_zero := ne_zero_of_mem_range_nonzero _ _ hy,
+  rw [measure_congr (preimage_congr_ae zero_coe_fn {y}), set.preimage_zero] at h_meas,
+  simp_rw [set.mem_singleton_iff, h_ne_zero.symm, if_false, measure_empty] at h_meas,
+  exact h_meas rfl,
+end
+
+--lemma range_nonzero_zero_subset : range_nonzero (0 : α →₁ₛ[μ] E) ⊆ {0} :=
+--by { intros y hy, rw finset.mem_singleton, exact mem_range_nonzero_zero y hy, }
+
+--lemma range_nonzero_zero_of_measure_ne_zero (hμ : μ ≠ 0) : range_nonzero (0 : α →₁ₛ[μ] E) = {0} :=
+--begin
+--  refine finset.subset.antisymm (range_nonzero_zero_subset) _,
+--  intros x hx,
+--  rw finset.mem_singleton at hx,
+--  rw [hx, mem_range_nonzero_iff,  measure_congr (preimage_congr_ae zero_coe_fn {(0 : E)}),
+--    set.preimage_zero],
+--  simp_rw [set.mem_singleton, if_true],
+--  rwa [ne.def, measure.measure_univ_eq_zero],
+--end
+
+--lemma range_nonzero_zero_of_measure_zero : range_nonzero (0 : α →₁ₛ[0] E) = ∅ :=
+--by { ext1 x, simp_rw mem_range_nonzero_iff, simp, }
+
+lemma measurable_set_fiber (f : α →₁ₛ[μ] E) (y : E) : measurable_set (f ⁻¹' {y}) :=
+(Lp.measurable (f : α →₁[μ] E)) (measurable_set_singleton y)
+
+lemma range_nonzero_add_of_disjoint_support (f g : α →₁ₛ[μ] E)
+  (hfg : ∀ y z : E, y ≠ 0 → z ≠ 0 → disjoint (f ⁻¹' {y}) (g ⁻¹' {z})) :
+  range_nonzero (f + g) = range_nonzero f ∪ range_nonzero g :=
+begin
+  ext1 x,
+  simp_rw [finset.mem_union, mem_range_nonzero_iff],
+  rw ← and_or_distrib_left,
+  rw and.congr_right_iff,
+  intro hx,
+  rw [← L1.simple_func.coe_coe,
+    L1.simple_func.coe_add, measure_congr (L1.simple_func.preimage_congr_ae (Lp.coe_fn_add _ _) _),
+    L1.simple_func.coe_coe, L1.simple_func.coe_coe],
+  have h_disjoint : ∀ y, f y = 0 ∨ g y = 0,
+  { by_contra h_exists,
+    push_neg at h_exists,
+    rcases h_exists with ⟨y, hy⟩,
+    specialize hfg (f y) (g y) hy.1 hy.2,
+    rw set.disjoint_iff at hfg,
+    suffices h_mem_inter : y ∈ f ⁻¹' {f y} ∩ g ⁻¹' {g y}, by simpa using hfg h_mem_inter,
+    rw set.mem_inter_iff,
+    simp_rw [set.mem_preimage, set.mem_singleton_iff, eq_self_iff_true, true_and], },
+  have h_add : (f + g) ⁻¹' {x} = f ⁻¹' {x} ∪ g ⁻¹' {x},
+  { ext1 y,
+    simp_rw set.mem_union,
+    rw [set.mem_preimage, set.mem_singleton_iff, pi.add_apply],
+    cases h_disjoint y; simp [h, hx.symm], },
+  rwa [h_add, measure_union (hfg x x hx hx) (measurable_set_fiber f x) (measurable_set_fiber g x),
+    ne.def, add_eq_zero_iff, auto.not_and_eq],
+end
+
+lemma range_nonzero_add_of_null_support (f g : α →₁ₛ[μ] E)
+  (hfg : ∀ y z : E, y ≠ 0 → z ≠ 0 → μ (f ⁻¹' {y} ∩ g ⁻¹' {z}) = 0) :
+  range_nonzero (f + g) = range_nonzero f ∪ range_nonzero g :=
+begin
+  ext1 x,
+  simp_rw [finset.mem_union, mem_range_nonzero_iff],
+  rw ← and_or_distrib_left,
+  rw and.congr_right_iff,
+  intro hx,
+  rw [← L1.simple_func.coe_coe, L1.simple_func.coe_add,
+    measure_congr (L1.simple_func.preimage_congr_ae (Lp.coe_fn_add _ _) _), L1.simple_func.coe_coe,
+    L1.simple_func.coe_coe, ne.def, ne.def, ne.def, ← auto.not_and_eq, not_iff_not],
+  split; intro h_eq_zero,
+  { have hf_subset : μ (f ⁻¹' {x} \ (⇑f + ⇑g) ⁻¹' {x}) = 0,
+    { sorry, },
+    have hg_subset : μ (g ⁻¹' {x} \ (⇑f + ⇑g) ⁻¹' {x}) = 0,
+    { sorry, },
+    split,
+    { refine measure_mono_null (set.subset_diff_union (f ⁻¹' {x}) ((⇑f + ⇑g) ⁻¹' {x})) _,
+      refine le_antisymm ((measure_union_le _ _).trans (le_of_eq _)) (zero_le _),
+      rw [h_eq_zero, hf_subset, zero_add], },
+    { refine measure_mono_null (set.subset_diff_union (g ⁻¹' {x}) ((⇑f + ⇑g) ⁻¹' {x})) _,
+      refine le_antisymm ((measure_union_le _ _).trans (le_of_eq _)) (zero_le _),
+      rw [h_eq_zero, hg_subset, zero_add], }, },
+  { sorry, },
+end
+
+lemma indicator_L1s_fiber_ae_eq_self {s : set α} (hs : measurable_set s) (c : E)
+  (hμsc : c = 0 ∨ μ s < ∞) (hc : c ≠ 0) :
+  (indicator_L1s hs c hμsc) ⁻¹' {c} =ᵐ[μ] s :=
+begin
+  refine (preimage_congr_ae indicator_L1s_coe_fn {c}).trans _,
+  classical,
+  rw set.indicator_const_preimage_self,
+  simp [hc],
+end
+
+lemma indicator_L1s_fiber_ae_eq_empty {s : set α} (hs : measurable_set s)
+  (c : E) (hμsc : c = 0 ∨ μ s < ∞) (y : E) (hy0 : y ≠ (0 : E)) (hyc : y ≠ c) :
+  (indicator_L1s hs c hμsc) ⁻¹' {y} =ᵐ[μ] (∅ : set α) :=
+begin
+  refine (preimage_congr_ae indicator_L1s_coe_fn {y}).trans _,
+  rw set.indicator_preimage,
+  classical,
+  rw [set.preimage_const, set.preimage_zero],
+  simp [hy0.symm, hyc.symm],
+end
+
+lemma range_nonzero_add_indicator_of_disjoint (f : α →₁ₛ[μ] E) {s : set α}
+  (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞)
+  (hfs : ∀ y : E, y ≠ 0 → disjoint (f ⁻¹' {y}) s) :
+  range_nonzero (f + indicator_L1s hs c hμsc)
+    = range_nonzero f ∪ range_nonzero (indicator_L1s hs c hμsc) :=
+begin
+  rw range_nonzero_add_of_null_support f (indicator_L1s hs c hμsc) (λ y z hy hz, _),
+  rw ← ae_eq_empty,
+  by_cases hzc : z = c,
+  { have hc : c ≠ 0, by rwa hzc at hz,
+    specialize hfs y hy,
+    rw hzc,
+    refine (indicator_L1s_fiber_ae_eq_self hs c hμsc hc).mono (λ u hu, _),
+    rw [← @set.mem_def _ u (indicator_L1s hs c hμsc ⁻¹' {c}), ← @set.mem_def _ u s] at hu,
+    rw [← @set.mem_def _ u (f ⁻¹' {y} ∩ indicator_L1s hs c hμsc ⁻¹' {c}),
+      set.mem_inter_iff, hu, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+      mem_empty_eq, iff_false],
+    rw set.disjoint_iff at hfs,
+    intro hu_inter,
+    simpa using hfs hu_inter, },
+  { refine (indicator_L1s_fiber_ae_eq_empty hs c hμsc z hz hzc).mono (λ u hu, _),
+    rw [← @set.mem_def _ u (indicator_L1s hs c hμsc ⁻¹' {z}), ← @set.mem_def _ u ∅] at hu,
+    rw [← @set.mem_def _ u (f ⁻¹' {y} ∩ indicator_L1s hs c hμsc ⁻¹' {z}),
+      set.mem_inter_iff, hu, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+      mem_empty_eq, iff_false],
+    simp, },
+end
+
+lemma range_nonzero_add_indicator_of_disjoint' (f : α →₁ₛ[μ] E) {s : set α}
+  (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞)
+  (hfs : ∀ y : E, y ≠ 0 → disjoint (f ⁻¹' {y}) (indicator_L1s hs c hμsc ⁻¹' {c})) :
+  range_nonzero (f + indicator_L1s hs c hμsc)
+    = range_nonzero f ∪ range_nonzero (indicator_L1s hs c hμsc) :=
+begin
+  rw range_nonzero_add_of_null_support f (indicator_L1s hs c hμsc) (λ y z hy hz, _),
+  rw ← ae_eq_empty,
+  by_cases hzc : z = c,
+  { have hc : c ≠ 0, by rwa hzc at hz,
+    specialize hfs y hy,
+    rw [set.disjoint_iff, subset_empty_iff] at hfs,
+    rw [hzc, hfs], },
+  { refine (indicator_L1s_fiber_ae_eq_empty hs c hμsc z hz hzc).mono (λ u hu, _),
+    rw [← @set.mem_def _ u (indicator_L1s hs c hμsc ⁻¹' {z}), ← @set.mem_def _ u ∅] at hu,
+    rw [← @set.mem_def _ u (f ⁻¹' {y} ∩ indicator_L1s hs c hμsc ⁻¹' {z}),
+      set.mem_inter_iff, hu, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+      mem_empty_eq, iff_false],
+    simp, },
+end
+
+lemma mem_range_nonzero_indicator_L1s {s : set α} {hs : measurable_set s} {c : E}
+  {hμsc : c = 0 ∨ μ s < ∞} {x : E} (hx_mem : x ∈ range_nonzero (indicator_L1s hs c hμsc)) :
+  x = c :=
+begin
+  rw [mem_range_nonzero_iff, measure_congr (preimage_congr_ae indicator_L1s_coe_fn _),
+    set.indicator_preimage, set.preimage_zero, set.preimage_const] at hx_mem,
+  simp_rw set.mem_singleton_iff at hx_mem,
+  by_contra hxc,
+  rw ← ne.def at hxc,
+  cases hx_mem with hx0 hx,
+  simpa [hxc.symm, hx0.symm] using hx,
+end
+
+lemma range_nonzero_indicator_L1s_subset {s : set α} (hs : measurable_set s) (c : E)
+  (hμsc : c = 0 ∨ μ s < ∞) :
+  range_nonzero (indicator_L1s hs c hμsc) ⊆ {c} :=
+by { intros x hx, simp [mem_range_nonzero_indicator_L1s hx], }
+
+lemma set.indicator_const_preimage_zero {α γ} [has_zero γ] (s : set α) (c : γ) (hc : c ≠ 0) :
+  s.indicator (λ (y : α), c) ⁻¹' {(0 : γ)} = set.univ \ s :=
+begin
+  classical,
+  rw set.indicator_preimage,
+  simp_rw [set.preimage_const, set.preimage_zero, set.mem_singleton_iff, eq_self_iff_true, hc,
+    if_true, if_false],
+  simp,
+end
+
+--lemma zero_mem_range_nonzero_indicator_L1s {s : set α} (hs : measurable_set s) (c : E)
+--  (hμsc : c = 0 ∨ μ s < ∞) (hs_not_univ : μ s < μ set.univ) :
+--  (0 : E) ∈ range_nonzero (indicator_L1s hs c hμsc) :=
+--begin
+--  rw [mem_range_nonzero_iff, measure_congr (preimage_congr_ae indicator_L1s_coe_fn _)],
+--  by_cases hc0 : c = 0,
+--  { simp_rw hc0,
+--    rw set.indicator_const_preimage_self,
+--    simp only [if_true, eq_self_iff_true, ne.def, measure.measure_univ_eq_zero],
+--    by_contra hμ0,
+--    simpa [hμ0] using hs_not_univ, },
+--  have hμs : μ s < ∞, by { cases hμsc, exact absurd hμsc hc0, exact hμsc, },
+--  rw set.indicator_const_preimage_zero _ _ hc0,
+--  rw measure_diff (set.subset_univ s) (measurable_set.univ) hs hμs,
+--  by_contra h_eq_zero,
+--  push_neg at h_eq_zero,
+--  rw ennreal.sub_eq_zero_iff_le at h_eq_zero,
+--  exact hs_not_univ.not_le h_eq_zero,
+--end
+
+lemma mem_range_nonzero_indicator_L1s_self {s : set α} (hs : measurable_set s) (c : E)
+  (hμsc : c = 0 ∨ μ s < ∞) (hμs_pos : 0 < μ s) (hc0 : c ≠ 0) :
+  c ∈ range_nonzero (indicator_L1s hs c hμsc) :=
+begin
+  rw [mem_range_nonzero_iff, measure_congr (preimage_congr_ae indicator_L1s_coe_fn _),
+    set.indicator_const_preimage_self],
+  simp_rw [hc0, if_false],
+  exact ⟨hc0, hμs_pos.ne.symm⟩,
+end
+
+lemma range_nonzero_indicator_L1s_eq {s : set α} (hs : measurable_set s) (c : E)
+  (hμsc : c = 0 ∨ μ s < ∞) (hs_nonempty : 0 < μ s) (hc : c ≠ 0) :
+  range_nonzero (indicator_L1s hs c hμsc) = {c} :=
+begin
+  refine finset.subset.antisymm (range_nonzero_indicator_L1s_subset hs c hμsc) _,
+  intros x hx,
+  rw finset.mem_singleton at hx,
+  rw hx,
+  exact mem_range_nonzero_indicator_L1s_self hs c hμsc hs_nonempty hc,
+end
+
+lemma set.mem_ite_iff (t s s' : set α) (y : α) :
+  y ∈ t.ite s s' ↔ (y ∈ t ∧ y ∈ s) ∨ (y ∉ t ∧ y ∈ s') :=
+by { rw [set.ite, set.mem_union, set.mem_inter_iff, set.mem_diff, and_comm, and_comm (y ∈ s')], }
+
+lemma set.mem_ite_iff_of_mem (t s s' : set α) (y : α) (hy : y ∈ t) : y ∈ t.ite s s' ↔ y ∈ s :=
+by simpa [hy] using set.mem_ite_iff t s s' y
+
+--lemma range_nonzero_indicator_L1s_univ {s : set α} (hs : measurable_set s) (c : E)
+--  (hμsc : c = 0 ∨ μ s < ∞) (hs_nonempty : 0 < μ s) (hs_univ : μ s = μ set.univ) :
+--  range_nonzero (indicator_L1s hs c hμsc) = {c} :=
+--begin
+--  by_cases hc : c = 0,
+--  { simp_rw hc,
+--   rw indicator_L1s_zero,
+--    have hμ : μ ≠ 0,
+--    { by_contra hμ0,
+--      push_neg at hμ0,
+--      simpa [hμ0] using hs_nonempty, },
+--    rw range_nonzero_zero_of_measure_ne_zero hμ, },
+--  have hμs : μ s < ∞, by {cases hμsc, exact absurd hμsc hc, exact hμsc, },
+--  refine finset.subset.antisymm _ _,
+--  { intros x hx,
+--    rw finset.mem_singleton,
+--    rw [range_nonzero_def, finset.mem_filter] at hx,
+--    cases hx,
+--    by_contra hxc,
+--    rw ← ne.def at hxc,
+--    rw [measure_congr (preimage_congr_ae indicator_L1s_coe_fn _), set.indicator_preimage,
+--      set.preimage_zero, set.preimage_const] at hx_right,
+--    have h_s_ite : ∀ t t' : set α, μ (s.ite t t') = μ t,
+--    { intros t t',
+--      refine measure_congr _,
+--      have hs_univ : s =ᵐ[μ] set.univ,
+--      { refine eventually_le.antisymm (eventually_of_forall (set.subset_univ s)) _,
+--        rw ae_le_set,
+--        rw measure_diff (set.subset_univ s) (measurable_set.univ) hs hμs,
+--        rw [hs_univ, ennreal.sub_self], },
+--      refine hs_univ.mono (λ y hy, _),
+--      rw [← @set.mem_def _ y s, ← @set.mem_def _ y set.univ, eq_iff_iff] at hy,
+--      rw [← @set.mem_def _ y (s.ite t t'), ← @set.mem_def _ y t, eq_iff_iff],
+--      rw set.mem_ite_iff_of_mem _ _ _ y (hy.mpr (set.mem_univ y)), },
+--    rw h_s_ite at hx_right,
+--    simp_rw [set.mem_singleton_iff, hxc.symm, if_false, measure_empty] at hx_right,
+--    exact hx_right rfl, },
+--  { intros x hx,
+--    simp_rw finset.mem_singleton at hx,
+--    rw hx,
+--    exact mem_range_nonzero_indicator_L1s_self hs c hμsc hs_nonempty, },
+--end
+
+lemma range_nonzero_indicator_L1s_add_of_disjoint {s : set α} (hs : measurable_set s) (cs : E)
+  (hμsc : cs = 0 ∨ μ s < ∞) {t : set α} (ht : measurable_set t) (ct : E) (hμtc : ct = 0 ∨ μ t < ∞)
+  (hst : disjoint s t) :
+  range_nonzero (indicator_L1s hs cs hμsc + indicator_L1s ht ct hμtc)
+    = range_nonzero (indicator_L1s hs cs hμsc) ∪ range_nonzero (indicator_L1s ht ct hμtc) :=
+begin
+  rw range_nonzero_add_of_null_support _ _ _,
+  intros y z hy hz,
+  rw ← ae_eq_empty,
+  by_cases hyc : y = cs,
+  swap,
+  { refine (indicator_L1s_fiber_ae_eq_empty hs cs hμsc y hy hyc).mono (λ u hu, _),
+    rw [← @set.mem_def _ u (indicator_L1s hs cs hμsc ⁻¹' {y}), ← @set.mem_def _ u ∅] at hu,
+    rw [← @set.mem_def _ u (indicator_L1s hs cs hμsc ⁻¹' {y} ∩ indicator_L1s ht ct hμtc ⁻¹' {z}),
+      set.mem_inter_iff, hu, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+      mem_empty_eq, iff_false],
+    simp, },
+  by_cases hzc : z = ct,
+  swap,
+  { refine (indicator_L1s_fiber_ae_eq_empty ht ct hμtc z hz hzc).mono (λ u hu, _),
+    rw [← @set.mem_def _ u (indicator_L1s ht ct hμtc ⁻¹' {z}), ← @set.mem_def _ u ∅] at hu,
+    rw [← @set.mem_def _ u (indicator_L1s hs cs hμsc ⁻¹' {y} ∩ indicator_L1s ht ct hμtc ⁻¹' {z}),
+      set.mem_inter_iff, hu, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+      mem_empty_eq, iff_false],
+    simp, },
+  rw [hyc, hzc],
+  have hcs : cs ≠ 0, by { rwa hyc at hy, },
+  have hct : ct ≠ 0, by { rwa hzc at hz, },
+  refine (indicator_L1s_fiber_ae_eq_self hs cs hμsc hcs).mp _,
+  refine (indicator_L1s_fiber_ae_eq_self ht ct hμtc hct).mono (λ u hu1 hu2, _),
+  rw [← @set.mem_def _ u (indicator_L1s ht ct hμtc ⁻¹' {ct}), ← @set.mem_def _ u t] at hu1,
+  rw [← @set.mem_def _ u (indicator_L1s hs cs hμsc ⁻¹' {cs}), ← @set.mem_def _ u s] at hu2,
+  rw [← @set.mem_def _ u (indicator_L1s hs cs hμsc ⁻¹' {cs} ∩ indicator_L1s ht ct hμtc ⁻¹' {ct}),
+    set.mem_inter_iff, hu1, hu2, ← @set.mem_def _ u ∅, eq_iff_iff, ← set.mem_inter_iff,
+    mem_empty_eq, iff_false],
+  rw set.disjoint_iff at hst,
+  intro hu_inter,
+  simpa using hst hu_inter,
+end
+
 /-- Find a representative of a `L1.simple_func`. -/
-def to_simple_func (f : α →₁ₛ[μ] E) : α →ₛ E := classical.some f.2
+def to_simple_func (f : α →₁ₛ[μ] E) : α →ₛ E :=
+∑ y in (range_nonzero f), indicator_simple_func (measurable_set_fiber f y) y
+
+lemma to_simple_func_def (f : α →₁ₛ[μ] E) :
+  to_simple_func f = ∑ y in (range_nonzero f), indicator_simple_func (measurable_set_fiber f y) y :=
+rfl
+
+lemma to_simple_func_zero : to_simple_func (0 : α →₁ₛ[μ] E) = 0 :=
+by { rw [to_simple_func_def, range_nonzero_zero, finset.sum_empty], }
+
+lemma to_simple_func_indicator {s : set α} (hs : measurable_set s) (c : E)
+  (hμsc : c = 0 ∨ μ s < ∞) (hμs_pos : 0 < μ s) :
+  to_simple_func (indicator_L1s hs c hμsc) =
+    indicator_simple_func (measurable_set_fiber (indicator_L1s hs c hμsc) c) c :=
+begin
+  rw to_simple_func_def,
+  by_cases hc0 : c = 0,
+  { simp_rw [hc0, indicator_L1s_zero, range_nonzero_zero, finset.sum_empty,
+      indicator_simple_func_zero], },
+  rw range_nonzero_indicator_L1s_eq hs c hμsc hμs_pos hc0,
+  rw finset.sum_singleton,
+end
+
+lemma coe_finset_sum {ι} [measurable_space α] {μ : measure α} (f : ι → (α →₁ₛ[μ] E))
+  (s : finset ι) :
+  ⇑(∑ i in s, f i) =ᵐ[μ] ∑ i in s, f i :=
+begin
+  haveI : decidable_eq ι := classical.dec_eq ι,
+  refine finset.induction _ _ s,
+  { simp only [finset.sum_empty],
+    rw [← L1.simple_func.coe_coe, L1.simple_func.coe_zero],
+    exact Lp.coe_fn_zero _ _ _, },
+  intros j s hjs h_sum,
+  rw [finset.sum_insert hjs, ← L1.simple_func.coe_coe, L1.simple_func.coe_add],
+  refine (Lp.coe_fn_add _ _).trans _,
+  rw [L1.simple_func.coe_coe, L1.simple_func.coe_coe],
+  have h : ⇑(f j) + ⇑∑ (x : ι) in s, f x =ᵐ[μ] ⇑(f j) + ∑ (x : ι) in s, ⇑(f x),
+  { refine h_sum.mono (λ x hx, _),
+    rw [pi.add_apply, pi.add_apply, hx], },
+  refine h.trans _,
+  rw ← finset.sum_insert hjs,
+end
+
+lemma simple_func_eq_sum_indicator (f : α →₁ₛ[μ] E) :
+  f =ᵐ[μ] ∑ y in range_nonzero f, (f ⁻¹' {y}).indicator (λ _, y) :=
+begin
+  refine (some_simple_func_eq_fun f).symm.trans _,
+  rw simple_func_eq_sum_indicator (some_simple_func f),
+  rw measure_theory.simple_func.coe_finset_sum,
+  have h_change_set : ∑ (y : E) in range_nonzero f, (⇑f ⁻¹' {y}).indicator (λ (_x : α), y)
+    =ᵐ[μ] ∑ (y : E) in (some_simple_func f).range, (⇑f ⁻¹' {y}).indicator (λ (_x : α), y),
+  { rw ← finset.union_sdiff_of_subset (range_nonzero_subset_range_some_simple_func f),
+    rw finset.sum_union,
+    swap, {exact finset.disjoint_sdiff, },
+    nth_rewrite 0 ← add_zero (∑ (y : E) in range_nonzero f, (⇑f ⁻¹' {y}).indicator (λ (_x : α), y)),
+    refine eventually_eq.add eventually_eq.rfl _,
+    dsimp only,
+    refine eventually_eq.trans _
+      (eventually_eq.finset_sum (λ x, 0) _ ((some_simple_func f).range \ range_nonzero f) _),
+    { simp, },
+    intros x hx,
+    by_cases hx0 : x = 0,
+    { simp_rw [hx0, indicator_zero],
+      exact eventually_eq.rfl, },
+    have hμ_fiber_zero : μ (f ⁻¹' {x}) = 0,
+    { by_contra hμfx,
+      have hfx : x ≠ 0 ∧ μ (f ⁻¹' {x}) ≠ 0 := ⟨hx0, hμfx⟩,
+      rw ← mem_range_nonzero_iff f x at hfx,
+      rw finset.mem_sdiff at hx,
+      exact hx.2 hfx, },
+    rw ← ae_eq_empty at hμ_fiber_zero,
+    refine hμ_fiber_zero.mono (λ y hy, _),
+    rw [← @set.mem_def _ y (f ⁻¹' {x}), ← @set.mem_def _ y ∅] at hy,
+    rw set.indicator_apply,
+    simp_rw hy,
+    simp, },
+  refine eventually_eq.trans _ h_change_set.symm,
+  refine eventually_eq.finset_sum _ _ (some_simple_func f).range (λ y hy, _),
+  rw indicator_simple_func_coe,
+  refine set.indicator_congr_ae (preimage_congr_ae (some_simple_func_eq_fun f) {y}),
+end
+
+lemma simple_func_eq_sum_indicator_L1s (f : α →₁ₛ[μ] E) :
+  f = ∑ y in range_nonzero f, indicator_L1s (measurable_set_fiber f y) y
+    (zero_or_finite_fiber f y) :=
+begin
+  ext1,
+  have h_meas : ∀ y, measurable_set (f ⁻¹' {y}), from measurable_set_fiber f,
+  refine (simple_func_eq_sum_indicator f).trans
+    (eventually_eq.trans _ (coe_finset_sum _ (range_nonzero f)).symm),
+  refine eventually_eq.finset_sum _ _ _ _,
+  intros y hy,
+  exact indicator_L1s_coe_fn.symm,
+end
+
+lemma to_simple_func_eq_fun (f : α →₁ₛ[μ] E) : to_simple_func f =ᵐ[μ] f :=
+begin
+  rw to_simple_func_def,
+  nth_rewrite 1 simple_func_eq_sum_indicator_L1s f,
+  rw measure_theory.simple_func.coe_finset_sum,
+  refine eventually_eq.trans _(coe_finset_sum _ (range_nonzero f)).symm,
+  refine eventually_eq.finset_sum _ _ _ _,
+  intros i hi,
+  rw indicator_simple_func_coe,
+  exact indicator_L1s_coe_fn.symm,
+end
+
+lemma to_simple_func_mk_eq_fun (f : α →₁ₛ[μ] E) :
+  (ae_eq_fun.mk (to_simple_func f) (to_simple_func f).ae_measurable : α →ₘ[μ] E) = f :=
+begin
+  rw ae_eq_fun.ext_iff,
+  refine (ae_eq_fun.coe_fn_mk _ _).trans _,
+  exact to_simple_func_eq_fun f,
+end
+
+lemma range_to_simple_func_subset (f : α →₁ₛ[μ] E) :
+  (to_simple_func f).range ⊆ insert (0 : E) (range_nonzero f) :=
+sorry
 
 /-- `(to_simple_func f)` is measurable. -/
 protected lemma measurable (f : α →₁ₛ[μ] E) : measurable (to_simple_func f) :=
 (to_simple_func f).measurable
 
+/-- `(to_simple_func f)` is ae_measurable. -/
 protected lemma ae_measurable (f : α →₁ₛ[μ] E) : ae_measurable (to_simple_func f) μ :=
 (simple_func.measurable f).ae_measurable
 
 /-- `to_simple_func f` is integrable. -/
 protected lemma integrable (f : α →₁ₛ[μ] E) : integrable (to_simple_func f) μ :=
 begin
-  apply (integrable_mk (simple_func.ae_measurable f)).1,
-  convert integrable_coe_fn f.val,
-  exact classical.some_spec f.2
+  apply (ae_eq_fun.integrable_mk ((to_simple_func f).ae_measurable)).1,
+  convert L1.integrable_coe_fn f.val,
+  exact to_simple_func_mk_eq_fun f,
 end
 
 lemma to_L1_to_simple_func (f : α →₁ₛ[μ] E) :
   to_L1 (to_simple_func f) (simple_func.integrable f) = f :=
-by { rw ← simple_func.eq_iff', exact classical.some_spec f.2 }
+by { rw ← simple_func.eq_iff', exact to_simple_func_mk_eq_fun f }
 
 lemma to_simple_func_to_L1 (f : α →ₛ E) (hfi : integrable f μ) :
   to_simple_func (to_L1 f hfi) =ᵐ[μ] f :=
-by { rw ← mk_eq_mk, exact classical.some_spec (to_L1 f hfi).2 }
+by { rw ← mk_eq_mk, exact to_simple_func_mk_eq_fun (to_L1 f hfi) }
 
 lemma to_simple_func_eq_to_fun (f : α →₁ₛ[μ] E) : to_simple_func f =ᵐ[μ] f :=
 begin
-  simp_rw [← integrable.to_L1_eq_to_L1_iff (to_simple_func f) f (simple_func.integrable f)
-    (integrable_coe_fn ↑f), subtype.ext_iff],
-  convert classical.some_spec f.coe_prop,
-  exact integrable.to_L1_coe_fn _ _,
+  rw [← mk_eq_mk, to_simple_func_mk_eq_fun f, ← ae_eq_fun.mk_coe_fn ↑f],
+  { congr, },
+  { exact Lp.ae_measurable _, },
 end
 
 variables (E μ)
