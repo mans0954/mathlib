@@ -672,29 +672,30 @@ begin
   exact (indicator_L1s_ae_eq_fun_smul_const hs c hμs).symm,
 end
 
-def tensor_to_L1s' : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[ℝ] α →₁ₛ[μ] F :=
-tensor_product.uncurry ℝ (α →₁ₛ[μ] ℝ) F (α →₁ₛ[μ] F) (L1s_smul_const_bilin ℝ)
+variables (𝕂)
+def tensor_to_L1s' : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F :=
+tensor_product.uncurry' ℝ (α →₁ₛ[μ] ℝ) F (α →₁ₛ[μ] F) (L1s_smul_const_bilin 𝕂)
 
 lemma tensor_to_L1s'_smul_const (c : 𝕂) (φ : (α →₁ₛ[μ] ℝ) ⊗[ℝ] F) :
-  tensor_to_L1s' (c • φ) = c • tensor_to_L1s' φ :=
+  tensor_to_L1s' 𝕂 (c • φ) = c • tensor_to_L1s' 𝕂 φ :=
 begin
   refine tensor_product.induction_on φ _ _ _,
   { rw [linear_map.map_zero, smul_zero, linear_map.map_zero, smul_zero], },
   { intros f x,
+    simp_rw [tensor_to_L1s', ← tensor_product.tmul_smul, tensor_product.uncurry'_apply],
     sorry, },
   { intros η ξ hη hξ,
     rw [smul_add, tensor_to_L1s'.map_add, hη, hξ, tensor_to_L1s'.map_add, smul_add], },
 end
 
-variables (𝕂)
 def tensor_to_L1s : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F :=
-{ to_fun := tensor_to_L1s'.to_fun,
-  map_add' := tensor_to_L1s'.map_add',
-  map_smul' := tensor_to_L1s'_smul_const, }
+{ to_fun := (tensor_to_L1s' 𝕂).to_fun,
+  map_add' := (tensor_to_L1s' 𝕂).map_add',
+  map_smul' := tensor_to_L1s'_smul_const 𝕂, }
 variables {𝕂}
 
 lemma tensor_to_L1s_eq_tensor_to_L1s' :
-  ⇑(tensor_to_L1s 𝕂 : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F) = tensor_to_L1s' :=
+  ⇑(tensor_to_L1s 𝕂 : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F) = tensor_to_L1s' 𝕂 :=
 rfl
 
 lemma tensor_to_L1s_indicator {s : set α} (hs : measurable_set s) (c : F) (hμs : μ s < ∞) :
@@ -746,8 +747,7 @@ def tensor_to_L1s_equiv : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) ≃ₗ[𝕂] α �
 
 variables (F 𝕂)
 def L1_extend_from_ℝ (T : (α →₁ₛ[μ] ℝ) →ₗ[ℝ] (α →₁[μ] ℝ)) : (α →₁ₛ[μ] F) →ₗ[𝕂] (α →₁[μ] F) :=
-sorry
---tensor_to_L1.comp ((linear_map.rtensor G T).comp tensor_to_L1s_equiv.symm.to_linear_map)
+tensor_to_L1.comp ((linear_map.rtensor' _ _ T).comp tensor_to_L1s_equiv.symm.to_linear_map)
 variables {F 𝕂}
 
 lemma norm_simple_func_eq_sum_norm_indicator_L1s (f : α →₁ₛ[μ] G) :

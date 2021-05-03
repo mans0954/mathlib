@@ -703,6 +703,10 @@ variables {R M N P S}
   uncurry R M N P f (m ⊗ₜ n) = f m n :=
 by rw [uncurry, linear_map.flip_apply, lift.tmul]; refl
 
+@[simp] theorem uncurry'_apply [smul_comm_class R R' P] (f : M →ₗ[R] N →ₗ[R'] P) (m : M) (n : N) :
+  uncurry' R M N P f (m ⊗ₜ n) = f m n :=
+by rw [uncurry', linear_map.flip_apply, lift.tmul]; refl
+
 variables (R M N P)
 /-- A linear equivalence constructing a linear map `M ⊗ N → P` given a bilinear map `M → N → P`
 with the property that its composition with the canonical bilinear map `M → N → M ⊗ N` is
