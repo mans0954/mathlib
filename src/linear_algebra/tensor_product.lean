@@ -206,18 +206,138 @@ smul_injective hx
 
 end comm_ring
 
+section two_different_R
+
+variables {R R' M N P Q : Type*}
+  [add_comm_monoid M] [add_comm_monoid N] [add_comm_monoid P] [add_comm_monoid Q]
+  [comm_semiring R] [comm_semiring R']
+  [semimodule R M] [semimodule R P]
+  [semimodule R' N] [semimodule R' P]
+
+section lflip'
+
+variables [smul_comm_class R' R P] [smul_comm_class R R' P]
+
+variables (R M N P)
+/-- Given a linear map from `M` to linear maps from `N` to `P`, i.e., a bilinear map `M → N → P`,
+change the order of variables and get a linear map from `N` to linear maps from `M` to `P`. -/
+def lflip' : (M →ₗ[R] N →ₗ[R'] P) →ₗ[R'] N →ₗ[R'] M →ₗ[R] P :=
+⟨flip, λ _ _, rfl, λ _ _, rfl⟩
+variables {R M N P}
+
+@[simp] theorem lflip'_apply (f : M →ₗ[R] N →ₗ[R'] P) (m : M) (n : N) :
+  lflip' R M N P f n m = f m n := rfl
+
+end lflip'
+
+section restrict_smul
+
+variables [semimodule R N] [semimodule R R'] [is_scalar_tower R R' P] [is_scalar_tower R R' N]
+variables (R R')
+def restrict_smul (f : N →ₗ[R'] P) : N →ₗ[R] P :=
+{ to_fun := f.to_fun,
+  map_add' := f.map_add',
+  map_smul' := λ r n, by { rw [← one_smul R' n, ← smul_assoc, f.map_smul', smul_assoc, one_smul,
+    one_smul], } }
+
+def restrict_smul_lm [smul_comm_class R R' P] : (N →ₗ[R'] P) →ₗ[R'] (N →ₗ[R] P) :=
+{ to_fun := restrict_smul R R',
+  map_add' := λ f g, rfl,
+  map_smul' := λ r f, rfl, }
+variables {R'}
+
+lemma restrict_smul_coe_fn (f : N →ₗ[R'] P) : ⇑(restrict_smul R R' f) = f := rfl
+variables {R}
+
+end restrict_smul
+
+variables [smul_comm_class R' R P] [semimodule R R'] [is_scalar_tower R R' P]
+variables (f : M →ₗ[R] N →ₗ[R'] P)
+
+section lcomp'
+
+variables [semimodule R N] [is_scalar_tower R R' N] [smul_comm_class R R' P]
+
+variables (R R' P)
+/-- Composing a linear map `M →[R] N` and a linear map `N →[R'] P` to form a linear map
+`M →[R'] P`. -/
+def lcomp' (f : M →ₗ[R] N) : (N →ₗ[R'] P) →ₗ[R'] M →ₗ[R] P :=
+flip $ linear_map.comp (flip (restrict_smul_lm R R')) f
+variables {R R' P}
+
+@[simp] theorem lcomp'_apply (f : M →ₗ[R] N) (g : N →ₗ[R'] P) (x : M) :
+  lcomp' R R' P f g x = g (f x) := rfl
+
+variables [smul_comm_class R R' N]
+
+variables (R R' M N P)
+def lcomp'_lm : (M →ₗ[R] N) →ₗ[R'] (N →ₗ[R'] P) →ₗ[R'] M →ₗ[R] P :=
+{ to_fun := lcomp' R R' P,
+  map_add' := λ f f', ext₂ $ λ g x, g.map_add _ _,
+  map_smul' := λ r' f, by { ext g x, simp_rw lcomp'_apply, exact g.map_smul _ _, } }
+
+/-- Composing a linear map `M →[R] N` and a linear map `N →[R'] P` to form a linear map
+`M →[R] P`. -/
+def llcomp' : (N →ₗ[R'] P) →ₗ[R'] (M →ₗ[R] N) →ₗ[R'] M →ₗ[R] P :=
+flip (lcomp'_lm R R' M N P)
+variables {R R' M N P}
+
+@[simp] theorem llcomp'_apply (f : N →ₗ[R'] P) (g : M →ₗ[R] N) (x : M) :
+  llcomp' R R' M N P f g x = f (g x) := rfl
+
+end lcomp'
+
+section comp'
+variables [semimodule R N] [semimodule R Q] [semimodule R' Q]
+
+def comp' [is_scalar_tower R R' N] [is_scalar_tower R R' Q] (g : N →ₗ[R'] Q) (f : M →ₗ[R] N) :
+  M →ₗ[R] Q :=
+(restrict_smul R R' g).comp f
+
+lemma comp'_apply [is_scalar_tower R R' N] [is_scalar_tower R R' Q] (g : N →ₗ[R'] Q)
+  (f : M →ₗ[R] N) (x : M) :
+  comp' g f x = g (f x) :=
+by rw [comp', comp_apply, restrict_smul_coe_fn]
+
+end comp'
+
+section compl₂
+
+variables [semimodule R' Q]
+
+/-- Composing a linear map `Q →[R'] N` and a bilinear map `M →[R] N →[R'] P` to
+form a bilinear map `M →[R] Q →[R'] P`. -/
+def compl₂' (g : Q →ₗ[R'] N) : M →ₗ[R] Q →ₗ[R'] P := (lcomp' R' R' _ g).comp' f
+
+@[simp] theorem compl₂'_apply (g : Q →ₗ[R'] N) (m : M) (q : Q) :
+  f.compl₂' g m q = f m (g q) := rfl
+
+end compl₂
+
+section compr₂
+variables [semimodule R Q] [semimodule R' Q] [smul_comm_class R' R Q] [is_scalar_tower R R' Q]
+
+/-- Composing a linear map `P →[R'] Q` and a bilinear map `M →[R] N →[R'] P` to
+form a bilinear map `M →[R] N →[R'] Q`. -/
+def compr₂' (g : P →ₗ[R'] Q) : M →ₗ[R] N →ₗ[R'] Q :=
+linear_map.comp (restrict_smul R R' (llcomp R' _ _ _ g)) f
+
+@[simp] theorem compr₂'_apply (g : P →ₗ[R'] Q) (m : M) (n : N) :
+  f.compr₂' g m n = g (f m n) := rfl
+
+end compr₂
+
+end two_different_R
+
 end linear_map
 
 section semiring
-variables {R : Type*} [comm_semiring R]
-variables {R' : Type*} [comm_semiring R']
-variables {M : Type*} {N : Type*} {P : Type*} {Q : Type*} {S : Type*}
+variables {R R' M N P Q S : Type*} [comm_semiring R] [comm_semiring R']
 
 variables [add_comm_monoid M] [add_comm_monoid N] [add_comm_monoid P] [add_comm_monoid Q]
   [add_comm_monoid S]
 variables [semimodule R M] [semimodule R N] [semimodule R P] [semimodule R Q] [semimodule R S]
 variables [semimodule R' N]
-include R
 
 variables (M N)
 
@@ -301,7 +421,15 @@ variables {N}
 lemma tmul_add (m : M) (n₁ n₂ : N) : m ⊗ₜ (n₁ + n₂) = m ⊗ₜ n₁ + m ⊗ₜ[R] n₂ :=
 eq.symm $ quotient.sound' $ add_con_gen.rel.of _ _ $ eqv.of_add_right _ _ _
 
-section
+/-- Auxiliary function to defining scalar multiplication on tensor product. -/
+def smul.aux {R' : Type*} [has_scalar R' N] (r : R') : free_add_monoid (M × N) →+ M ⊗[R] N :=
+free_add_monoid.lift $ λ p : M × N, p.1 ⊗ₜ (r • p.2)
+
+theorem smul.aux_of {R' : Type*} [has_scalar R' N] (r : R') (m : M) (n : N) :
+  smul.aux r (free_add_monoid.of (m, n)) = m ⊗ₜ[R] (r • n) :=
+rfl
+
+section compatible_smul
 
 variables (R R' M N) [semimodule R' M]
 /--
@@ -318,10 +446,7 @@ used.
 class compatible_smul :=
 (smul_tmul : ∀ (r : R') (m : M) (n : N), (r • m) ⊗ₜ n = m ⊗ₜ[R] (r • n))
 
-end
-
-section compatible_smul
-variables [semimodule R' M]
+variables {R R' M N}
 
 /-- Note that this provides the default `compatible_smul R R M N` instance through
 `mul_action.is_scalar_tower.left`. -/
@@ -343,14 +468,6 @@ compatible_smul.smul_tmul _ _ _
 
 end compatible_smul
 
-/-- Auxiliary function to defining scalar multiplication on tensor product. -/
-def smul.aux {R' : Type*} [has_scalar R' N] (r : R') : free_add_monoid (M × N) →+ M ⊗[R] N :=
-free_add_monoid.lift $ λ p : M × N, p.1 ⊗ₜ (r • p.2)
-
-theorem smul.aux_of {R' : Type*} [has_scalar R' N] (r : R') (m : M) (n : N) :
-  smul.aux r (free_add_monoid.of (m, n)) = m ⊗ₜ[R] ( r • n) :=
-rfl
-
 variables [smul_comm_class R R' N]
 
 -- Most of the time we want the instance below this one, which is easier for typeclass resolution
@@ -367,7 +484,7 @@ add_con.add_con_gen_le $ λ x y hxy, match x, y, hxy with
 | _, _, (eqv.of_add_right m n₁ n₂) := (add_con.ker_rel _).2 $
     by simp_rw [add_monoid_hom.map_add, smul.aux_of, smul_add, tmul_add]
 | _, _, (eqv.of_smul s m n)        := (add_con.ker_rel _).2 $
-    by rw [smul.aux_of, smul.aux_of, ←smul_comm, smul_tmul]
+    by { rw [smul.aux_of, smul.aux_of, ←smul_comm, @smul_tmul R R] }
 | _, _, (eqv.add_comm x y)         := (add_con.ker_rel _).2 $
     by simp_rw [add_monoid_hom.map_add, add_comm]
 end⟩
@@ -411,6 +528,27 @@ instance : semimodule R (M ⊗[R] N) := tensor_product.semimodule'
   x ⊗ₜ (r • y) = r • (x ⊗ₜ[R] y) :=
 rfl
 
+instance [semimodule R R'] [is_scalar_tower R R' N] : is_scalar_tower R R' (M ⊗[R] N) :=
+{ smul_assoc := by {
+  intros r r' x,
+  refine tensor_product.induction_on x (by simp) _ _,
+  { intros m n,
+    rw [← tmul_smul, smul_assoc, tmul_smul, tmul_smul], },
+  { intros y z hy hz,
+    rw [smul_add, smul_add, smul_add, hy, hz], }, }, }
+
+/-- making this one an instance causes errors below -/
+protected def smul_comm_class_tensor : smul_comm_class R R' (M ⊗[R] N) :=
+{ smul_comm := λ r r' x, by {
+  refine tensor_product.induction_on x (by simp) _ _,
+  { intros m n,
+    rw [← tmul_smul, ← tmul_smul, smul_comm, tmul_smul, tmul_smul], },
+  { intros y z hy hz,
+    rw [smul_add, smul_add, smul_add, smul_add, hy, hz], }, }, }
+
+instance smul_comm_class_tensor' : smul_comm_class R' R (M ⊗[R] N) :=
+@smul_comm_class.symm R R' _ _ _ tensor_product.smul_comm_class_tensor
+
 section compatible_smul
 variables [semimodule R' M]
 
@@ -424,7 +562,13 @@ variables (R M N)
 /-- The canonical bilinear map `M → N → M ⊗[R] N`. -/
 def mk : M →ₗ N →ₗ M ⊗[R] N :=
 linear_map.mk₂ R (⊗ₜ) add_tmul (λ c m n, by rw [smul_tmul, tmul_smul]) tmul_add tmul_smul
-variables {R M N}
+
+variables (R')
+def mk' : M →ₗ[R] N →ₗ[R'] M ⊗[R] N :=
+@linear_map.mk₂' R _ R' _ M N (M ⊗[R] N) _ _ _ _ _ _ _ _ (⊗ₜ) add_tmul
+    (λ c m n, by { simp_rw [smul_tmul, tmul_smul], }) tmul_add tmul_smul
+
+variables {R R' M N}
 
 @[simp] lemma mk_apply (m : M) (n : N) : mk R M N m n = m ⊗ₜ n := rfl
 
@@ -436,7 +580,7 @@ lemma tmul_ite (x₁ : M) (x₂ : N) (P : Prop) [decidable P] :
   x₁ ⊗ₜ[R] (if P then x₂ else 0) = if P then x₁ ⊗ₜ x₂ else 0 :=
 by { split_ifs; simp }
 
-section
+section big_operators
 open_locale big_operators
 
 lemma sum_tmul {α : Type*} (s : finset α) (m : α → M) (n : N) :
@@ -456,18 +600,20 @@ begin
   { simp, },
   { simp [finset.sum_insert has, tmul_add, ih], },
 end
-end
+end big_operators
 
 end module
 
 section UMP
 
-variables {M N P Q}
-variables (f : M →ₗ[R] N →ₗ[R] P)
+variables {M N P Q} [semimodule R' P] [semimodule R R']
+  [smul_comm_class R' R P]
+  [is_scalar_tower R R' N] [is_scalar_tower R R' P]
+  (f : M →ₗ[R] N →ₗ[R'] P)
 
-/-- Auxiliary function to constructing a linear map `M ⊗ N → P` given a bilinear map `M → N → P`
-with the property that its composition with the canonical bilinear map `M → N → M ⊗ N` is
-the given bilinear map `M → N → P`. -/
+/-- Auxiliary function to constructing a linear map `M ⊗[R] N →ₗ[R] P` given a bilinear map
+`M →ₗ[R] N →ₗ[R] P` with the property that its composition with the canonical bilinear map
+`M →ₗ[R] N →ₗ[R] M ⊗[R] N` is the given bilinear map `M →ₗ[R] N →ₗ[R] P`. -/
 def lift_aux : (M ⊗[R] N) →+ P :=
 (add_con_gen (tensor_product.eqv R M N)).lift (free_add_monoid.lift $ λ p : M × N, f p.1 p.2) $
 add_con.add_con_gen_le $ λ x y hxy, match x, y, hxy with
@@ -480,7 +626,8 @@ add_con.add_con_gen_le $ λ x y hxy, match x, y, hxy with
 | _, _, (eqv.of_add_right m n₁ n₂) := (add_con.ker_rel _).2 $
     by simp_rw [add_monoid_hom.map_add, free_add_monoid.lift_eval_of, (f m).map_add]
 | _, _, (eqv.of_smul r m n)        := (add_con.ker_rel _).2 $
-    by simp_rw [free_add_monoid.lift_eval_of, f.map_smul₂, (f m).map_smul]
+    by { simp_rw [free_add_monoid.lift_eval_of, f.map_smul₂, ← @smul_one_smul N R R',
+      (f m).map_smul, @smul_one_smul P R], }
 | _, _, (eqv.add_comm x y)         := (add_con.ker_rel _).2 $
     by simp_rw [add_monoid_hom.map_add, add_comm]
 end
@@ -488,21 +635,21 @@ end
 lemma lift_aux_tmul (m n) : lift_aux f (m ⊗ₜ n) = f m n :=
 zero_add _
 
-variable {f}
+variables {f} [smul_comm_class R R' N]
 
-@[simp] lemma lift_aux.smul (r : R) (x) : lift_aux f (r • x) = r • lift_aux f x :=
+@[simp] lemma lift_aux.smul (r : R') (x) : lift_aux f (r • x) = r • lift_aux f x :=
 tensor_product.induction_on x (smul_zero _).symm
   (λ p q, by rw [← tmul_smul, lift_aux_tmul, lift_aux_tmul, (f p).map_smul])
   (λ p q ih1 ih2, by rw [smul_add, (lift_aux f).map_add, ih1, ih2, (lift_aux f).map_add, smul_add])
 
-variable (f)
+variables (f)
 /-- Constructing a linear map `M ⊗ N → P` given a bilinear map `M → N → P` with the property that
 its composition with the canonical bilinear map `M → N → M ⊗ N` is
 the given bilinear map `M → N → P`. -/
-def lift : M ⊗ N →ₗ P :=
+def lift : M ⊗ N →ₗ[R'] P :=
 { map_smul' := lift_aux.smul,
   .. lift_aux f }
-variable {f}
+variables {f}
 
 @[simp] lemma lift.tmul (x y) : lift f (x ⊗ₜ y) = f x y :=
 zero_add _
@@ -510,22 +657,22 @@ zero_add _
 @[simp] lemma lift.tmul' (x y) : (lift f).1 (x ⊗ₜ y) = f x y :=
 lift.tmul _ _
 
-theorem ext {g h : (M ⊗[R] N) →ₗ[R] P}
+theorem ext {g h : (M ⊗[R] N) →ₗ[R'] P}
   (H : ∀ x y, g (x ⊗ₜ y) = h (x ⊗ₜ y)) : g = h :=
 linear_map.ext $ λ z, tensor_product.induction_on z (by simp_rw linear_map.map_zero) H $
 λ x y ihx ihy, by rw [g.map_add, h.map_add, ihx, ihy]
 
-theorem lift.unique {g : (M ⊗[R] N) →ₗ[R] P} (H : ∀ x y, g (x ⊗ₜ y) = f x y) :
+theorem lift.unique {g : (M ⊗[R] N) →ₗ[R'] P} (H : ∀ x y, g (x ⊗ₜ[R] y) = f x y) :
   g = lift f :=
 ext $ λ m n, by rw [H, lift.tmul]
 
 theorem lift_mk : lift (mk R M N) = linear_map.id :=
 eq.symm $ lift.unique $ λ x y, rfl
 
-theorem lift_compr₂ (g : P →ₗ Q) : lift (f.compr₂ g) = g.comp (lift f) :=
+theorem lift_compr₂ {f : M →ₗ[R] N →ₗ[R] P} (g : P →ₗ[R] Q) : lift (f.compr₂ g) = g.comp (lift f) :=
 eq.symm $ lift.unique $ λ x y, by simp
 
-theorem lift_mk_compr₂ (f : M ⊗ N →ₗ P) : lift ((mk R M N).compr₂ f) = f :=
+theorem lift_mk_compr₂ (f : M ⊗[R] N →ₗ[R] P) : lift ((mk R M N).compr₂ f) = f :=
 by rw [lift_compr₂ f, lift_mk, linear_map.comp_id]
 
 /--
@@ -547,7 +694,10 @@ with the property that its composition with the canonical bilinear map `M → N 
 the given bilinear map `M → N → P`. -/
 def uncurry : (M →ₗ[R] N →ₗ[R] P) →ₗ[R] M ⊗[R] N →ₗ[R] P :=
 linear_map.flip $ lift $ (linear_map.lflip _ _ _ _).comp (linear_map.flip linear_map.id)
-variables {R M N P}
+
+def uncurry' [smul_comm_class R R' P] : (M →ₗ[R] N →ₗ[R'] P) →ₗ[R'] M ⊗[R] N →ₗ[R'] P :=
+linear_map.flip $ lift $ (linear_map.lflip' _ _ _ _).comp' (linear_map.flip linear_map.id)
+variables {R M N P S}
 
 @[simp] theorem uncurry_apply (f : M →ₗ[R] N →ₗ[R] P) (m : M) (n : N) :
   uncurry R M N P f (m ⊗ₜ n) = f m n :=
@@ -682,22 +832,39 @@ end
 @[simp] theorem assoc_symm_tmul (m : M) (n : N) (p : P) :
   (tensor_product.assoc R M N P).symm (m ⊗ₜ (n ⊗ₜ p)) = (m ⊗ₜ n) ⊗ₜ p := rfl
 
+variables [semimodule R' Q] [smul_comm_class R R' Q] [smul_comm_class R R' N]
+  [semimodule R R'] [is_scalar_tower R R' N] [is_scalar_tower R R' Q]
+  {M' : Type*} [add_comm_monoid M'] [semimodule R M']
+
 /-- The tensor product of a pair of linear maps between modules. -/
-def map (f : M →ₗ[R] P) (g : N →ₗ Q) : M ⊗ N →ₗ[R] P ⊗ Q :=
+def map (f : M →ₗ[R] P) (g : N →ₗ[R] Q) : M ⊗[R] N →ₗ[R] P ⊗[R] Q :=
 lift $ comp (compl₂ (mk _ _ _) g) f
+
+/-- The tensor product of a pair of linear maps between modules. -/
+def map' (f : M →ₗ[R] M') (g : N →ₗ[R'] Q) : M ⊗[R] N →ₗ[R'] M' ⊗[R] Q :=
+lift (comp' (compl₂' (mk' R R' M' Q) g) f)
 
 @[simp] theorem map_tmul (f : M →ₗ[R] P) (g : N →ₗ[R] Q) (m : M) (n : N) :
   map f g (m ⊗ₜ n) = f m ⊗ₜ g n :=
 rfl
 
+@[simp] theorem map'_tmul (f : M →ₗ[R] P) (g : N →ₗ[R'] Q) (m : M) (n : N) :
+  map' f g (m ⊗ₜ n) = f m ⊗ₜ g n :=
+rfl
+
 section
 variables {P' Q' : Type*}
 variables [add_comm_monoid P'] [semimodule R P']
-variables [add_comm_monoid Q'] [semimodule R Q']
+variables [add_comm_monoid Q'] [semimodule R Q'] [semimodule R' Q'] [smul_comm_class R' R Q']
+  [smul_comm_class R R' Q'] [is_scalar_tower R R' Q']
 
 lemma map_comp (f₂ : P →ₗ[R] P') (f₁ : M →ₗ[R] P) (g₂ : Q →ₗ[R] Q') (g₁ : N →ₗ[R] Q) :
   map (f₂.comp f₁) (g₂.comp g₁) = (map f₂ g₂).comp (map f₁ g₁) :=
 ext $ λ _ _, by simp only [linear_map.comp_apply, map_tmul]
+
+lemma map_comp' (f₂ : P →ₗ[R] P') (f₁ : M →ₗ[R] P) (g₂ : Q →ₗ[R'] Q') (g₁ : N →ₗ[R'] Q) :
+  map' (f₂.comp' f₁) (g₂.comp' g₁) = (map' f₂ g₂).comp' (map' f₁ g₁) :=
+ext $ λ _ _, by simp only [linear_map.comp'_apply, map'_tmul]
 
 lemma lift_comp_map (i : P →ₗ[R] Q →ₗ[R] Q') (f : M →ₗ[R] P) (g : N →ₗ[R] Q) :
   (lift i).comp (map f g) = lift ((i.comp f).compl₂ g) :=
@@ -724,6 +891,7 @@ end tensor_product
 
 namespace linear_map
 
+section lrtensor
 variables {R} (M) {N P Q}
 
 /-- `ltensor M f : M ⊗ N →ₗ M ⊗ P` is the natural linear map induced by `f : N →ₗ P`. -/
@@ -821,6 +989,24 @@ by simp only [ltensor, rtensor, ← map_comp, id_comp, comp_id]
 @[simp] lemma ltensor_comp_map (g' : Q →ₗ[R] S) (f : M →ₗ[R] P) (g : N →ₗ[R] Q) :
   (g'.ltensor _).comp (map f g) = map f (g'.comp g) :=
 by simp only [ltensor, rtensor, ← map_comp, id_comp, comp_id]
+
+end lrtensor
+
+section lrtensor'
+
+variables {M' : Type*} [add_comm_monoid M'] [semimodule R M'] [smul_comm_class R R' N]
+  [semimodule R' P] [smul_comm_class R R' P] [semimodule R R'] [is_scalar_tower R R' N]
+  [is_scalar_tower R R' P]
+
+/-- `ltensor M f : M ⊗ N →ₗ M ⊗ P` is the natural linear map induced by `f : N →ₗ P`. -/
+def ltensor' (f : N →ₗ[R'] P) : M ⊗[R] N →ₗ[R'] M ⊗[R] P :=
+tensor_product.map' id f
+
+/-- `rtensor f M : N₁ ⊗ M →ₗ N₂ ⊗ M` is the natural linear map induced by `f : N₁ →ₗ N₂`. -/
+def rtensor' (f : M →ₗ[R] M') : M ⊗[R] N →ₗ[R'] M' ⊗[R] N :=
+tensor_product.map' f id
+
+end lrtensor'
 
 end linear_map
 

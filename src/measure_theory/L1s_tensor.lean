@@ -520,14 +520,17 @@ begin
   rw [hfc, pi.smul_apply, smul_smul, smul_eq_mul],
 end
 
-lemma indicator_fun_smul_const_smul_const (c : ℝ) (f : α →₁[μ] ℝ) (x : G) :
+lemma indicator_fun_smul_const_smul_const [normed_space ℝ F] [smul_comm_class ℝ 𝕂 F]
+  (c : 𝕂) (f : α →₁[μ] ℝ) (x : F) :
   L1.indicator_fun_smul_const f (c • x) = c • L1.indicator_fun_smul_const f x :=
 begin
   ext1,
   refine eventually_eq.trans _ (Lp.coe_fn_smul c _).symm,
   refine (L1.indicator_fun_smul_const_coe_fn _ _).trans _,
   refine (L1.indicator_fun_smul_const_coe_fn f x).mono (λ a ha, _),
-  rw [pi.smul_apply, ha, smul_comm],
+  rw [pi.smul_apply, ha],
+  dsimp only,
+  rw smul_comm,
 end
 
 def indicator_fun_smul_const_bilin : (α →₁[μ] ℝ) →ₗ[ℝ] G →ₗ[ℝ] α →₁[μ] G :=
@@ -537,8 +540,26 @@ linear_map.mk₂ ℝ indicator_fun_smul_const
   indicator_fun_smul_const_add_const
   indicator_fun_smul_const_smul_const
 
-def tensor_to_L1 : ((α →₁[μ] ℝ) ⊗[ℝ] G) →ₗ[ℝ] α →₁[μ] G :=
+def tensor_to_L1' : ((α →₁[μ] ℝ) ⊗[ℝ] G) →ₗ[ℝ] α →₁[μ] G :=
 tensor_product.uncurry ℝ (α →₁[μ] ℝ) G (α →₁[μ] G) indicator_fun_smul_const_bilin
+
+lemma tensor_to_L1'_smul_const [normed_space ℝ F] [smul_comm_class ℝ 𝕂 F]
+  (c : 𝕂) (φ : (α →₁[μ] ℝ) ⊗[ℝ] F) :
+  tensor_to_L1' (c • φ) = c • tensor_to_L1' φ :=
+begin
+  refine tensor_product.induction_on φ _ _ _,
+  { rw [linear_map.map_zero, smul_zero, linear_map.map_zero, smul_zero], },
+  { intros f x,
+    sorry, },
+  { intros η ξ hη hξ,
+    rw [smul_add, tensor_to_L1'.map_add, hη, hξ, tensor_to_L1'.map_add, smul_add], },
+end
+
+def tensor_to_L1 [normed_space ℝ F] [smul_comm_class ℝ 𝕂 F] :
+  ((α →₁[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁[μ] F :=
+{ to_fun := tensor_to_L1'.to_fun,
+  map_add' := tensor_to_L1'.map_add',
+  map_smul' := tensor_to_L1'_smul_const, }
 
 def L1s_smul_const (f : α →₁ₛ[μ] ℝ) (x : G) : α →₁ₛ[μ] G :=
 ⟨indicator_fun_smul_const f x, sorry⟩
@@ -598,22 +619,45 @@ begin
   rw [hfc, pi.smul_apply, smul_smul, smul_eq_mul],
 end
 
-lemma L1s_smul_const_smul_const (c : ℝ) (f : α →₁ₛ[μ] ℝ) (x : G) :
+lemma L1s_smul_const_smul_const [normed_space ℝ F] [smul_comm_class ℝ 𝕂 F]
+  (c : 𝕂) (f : α →₁ₛ[μ] ℝ) (x : F) :
   L1s_smul_const f (c • x) = c • L1s_smul_const f x :=
 begin
   ext1,
   refine eventually_eq.trans _ (coe_fn_smul c _).symm,
   refine (L1s_smul_const_coe_fn _ _).trans _,
   refine (L1s_smul_const_coe_fn f x).mono (λ a ha, _),
-  rw [pi.smul_apply, ha, smul_comm],
+  rw [pi.smul_apply, ha],
+  dsimp only,
+  have : add_comm_group (F →ₗ[𝕂] ↥(α →₁ₛ[μ] F)),
+  { exact linear_map.add_comm_group, },
+  rw smul_comm,
 end
 
-def L1s_smul_const_bilin : (α →₁ₛ[μ] ℝ) →ₗ[ℝ] G →ₗ[ℝ] α →₁ₛ[μ] G :=
-linear_map.mk₂ ℝ L1s_smul_const L1s_smul_const_add_fun L1s_smul_const_smul_fun
-  L1s_smul_const_add_const L1s_smul_const_smul_const
+variables [normed_space ℝ F] [is_scalar_tower ℝ 𝕂 F]
 
-lemma L1s_smul_const_bilin_coe_fn (f : α →₁ₛ[μ] ℝ) (x : G) :
-  L1s_smul_const_bilin f x = L1s_smul_const f x :=
+instance : is_scalar_tower ℝ 𝕂 (Lp F p μ) :=
+{ smul_assoc := λ r c f, by { ext1,
+    refine (Lp.coe_fn_smul _ _).trans _,
+    refine eventually_eq.trans _ (Lp.coe_fn_smul _ _).symm,
+    refine (Lp.coe_fn_smul c f).mono (λ x hx, _),
+    rw [pi.smul_apply, pi.smul_apply, hx, pi.smul_apply, smul_assoc], } }
+
+instance : is_scalar_tower ℝ 𝕂 (α →₁ₛ[μ] F) :=
+{ smul_assoc := λ r c f, by { ext1,
+    refine (coe_fn_smul _ _).trans _,
+    refine eventually_eq.trans _ (coe_fn_smul _ _).symm,
+    refine (coe_fn_smul c f).mono (λ x hx, _),
+    rw [pi.smul_apply, pi.smul_apply, hx, pi.smul_apply, smul_assoc], } }
+
+variables (𝕂)
+def L1s_smul_const_bilin : (α →₁ₛ[μ] ℝ) →ₗ[ℝ] F →ₗ[𝕂] α →₁ₛ[μ] F :=
+linear_map.mk₂' ℝ 𝕂 L1s_smul_const
+  L1s_smul_const_add_fun L1s_smul_const_smul_fun L1s_smul_const_add_const L1s_smul_const_smul_const
+variables {𝕂}
+
+lemma L1s_smul_const_bilin_coe_fn (f : α →₁ₛ[μ] ℝ) (x : F) :
+  L1s_smul_const_bilin 𝕂 f x = L1s_smul_const f x :=
 rfl
 
 lemma L1s_smul_const_indicator {s : set α} (hs : measurable_set s) (c : G) (hμs : μ s < ∞) :
@@ -628,18 +672,41 @@ begin
   exact (indicator_L1s_ae_eq_fun_smul_const hs c hμs).symm,
 end
 
-def tensor_to_L1s : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] G) →ₗ[ℝ] α →₁ₛ[μ] G :=
-tensor_product.uncurry ℝ (α →₁ₛ[μ] ℝ) G (α →₁ₛ[μ] G) L1s_smul_const_bilin
+def tensor_to_L1s' : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[ℝ] α →₁ₛ[μ] F :=
+tensor_product.uncurry ℝ (α →₁ₛ[μ] ℝ) F (α →₁ₛ[μ] F) (L1s_smul_const_bilin ℝ)
 
-lemma tensor_to_L1s_indicator {s : set α} (hs : measurable_set s) (c : G) (hμs : μ s < ∞) :
-  tensor_to_L1s (indicator_L1s hs (1 : ℝ) (or.inr hμs) ⊗ₜ c) = indicator_L1s hs c (or.inr hμs) :=
+lemma tensor_to_L1s'_smul_const (c : 𝕂) (φ : (α →₁ₛ[μ] ℝ) ⊗[ℝ] F) :
+  tensor_to_L1s' (c • φ) = c • tensor_to_L1s' φ :=
 begin
-  rw [tensor_to_L1s, tensor_product.uncurry_apply, L1s_smul_const_bilin_coe_fn],
+  refine tensor_product.induction_on φ _ _ _,
+  { rw [linear_map.map_zero, smul_zero, linear_map.map_zero, smul_zero], },
+  { intros f x,
+    sorry, },
+  { intros η ξ hη hξ,
+    rw [smul_add, tensor_to_L1s'.map_add, hη, hξ, tensor_to_L1s'.map_add, smul_add], },
+end
+
+variables (𝕂)
+def tensor_to_L1s : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F :=
+{ to_fun := tensor_to_L1s'.to_fun,
+  map_add' := tensor_to_L1s'.map_add',
+  map_smul' := tensor_to_L1s'_smul_const, }
+variables {𝕂}
+
+lemma tensor_to_L1s_eq_tensor_to_L1s' :
+  ⇑(tensor_to_L1s 𝕂 : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F) = tensor_to_L1s' :=
+rfl
+
+lemma tensor_to_L1s_indicator {s : set α} (hs : measurable_set s) (c : F) (hμs : μ s < ∞) :
+  tensor_to_L1s 𝕂 (indicator_L1s hs (1 : ℝ) (or.inr hμs) ⊗ₜ c) = indicator_L1s hs c (or.inr hμs) :=
+begin
+  rw [tensor_to_L1s_eq_tensor_to_L1s', tensor_to_L1s', tensor_product.uncurry_apply,
+    L1s_smul_const_bilin_coe_fn],
   exact L1s_smul_const_indicator hs c hμs,
 end
 
 lemma tensor_to_L1s_surjective :
-  function.surjective ⇑(tensor_to_L1s : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] G) →ₗ[ℝ] α →₁ₛ[μ] G) :=
+  function.surjective ⇑(tensor_to_L1s 𝕂 : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F) :=
 begin
   intro f,
   use ∑ y in range_nonzero f, (dite (y = 0) (λ h, (0 : α →₁ₛ[μ] ℝ))
@@ -652,16 +719,16 @@ begin
   exact tensor_to_L1s_indicator _ _ _,
 end
 
-lemma tensor_to_L1s_eq_zero_iff {φ : (α →₁ₛ[μ] ℝ) ⊗[ℝ] G} :
-  tensor_to_L1s φ = 0 ↔ φ = 0 :=
+lemma tensor_to_L1s_eq_zero_iff {φ : (α →₁ₛ[μ] ℝ) ⊗[ℝ] F} :
+  tensor_to_L1s 𝕂 φ = 0 ↔ φ = 0 :=
 begin
-  refine ⟨λ h_zero, _, λ h_zero, by { rw h_zero, exact tensor_to_L1s.map_zero }⟩,
+  refine ⟨λ h_zero, _, λ h_zero, by { rw h_zero, exact (tensor_to_L1s 𝕂).map_zero }⟩,
   have hφ_range := (range_nonzero_eq_empty_iff _).mpr h_zero,
   sorry,
 end
 
 lemma tensor_to_L1s_injective :
-  function.injective ⇑(tensor_to_L1s : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] G) →ₗ[ℝ] α →₁ₛ[μ] G) :=
+  function.injective ⇑(tensor_to_L1s 𝕂 : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) →ₗ[𝕂] α →₁ₛ[μ] F) :=
 begin
   intros f g hfg,
   rw ← sub_eq_zero at hfg ⊢,
@@ -669,16 +736,19 @@ begin
   exact tensor_to_L1s_eq_zero_iff.mp hfg,
 end
 
-def tensor_to_L1s_equiv : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] G) ≃ₗ[ℝ] α →₁ₛ[μ] G :=
-{ to_fun := tensor_to_L1s.to_fun,
-  map_add' := tensor_to_L1s.map_add',
-  map_smul' := tensor_to_L1s.map_smul',
-  inv_fun := function.inv_fun tensor_to_L1s.to_fun,
+def tensor_to_L1s_equiv : ((α →₁ₛ[μ] ℝ) ⊗[ℝ] F) ≃ₗ[𝕂] α →₁ₛ[μ] F :=
+{ to_fun := (tensor_to_L1s 𝕂).to_fun,
+  map_add' := (tensor_to_L1s 𝕂).map_add',
+  map_smul' := (tensor_to_L1s 𝕂).map_smul',
+  inv_fun := function.inv_fun (tensor_to_L1s 𝕂).to_fun,
   left_inv := function.left_inverse_inv_fun tensor_to_L1s_injective,
   right_inv := function.right_inverse_inv_fun tensor_to_L1s_surjective, }
 
-def L1_extend_from_ℝ (T : (α →₁ₛ[μ] ℝ) →ₗ[ℝ] (α →₁[μ] ℝ)) : (α →₁ₛ[μ] G) →ₗ[ℝ] (α →₁[μ] G) :=
-tensor_to_L1.comp ((linear_map.rtensor G T).comp tensor_to_L1s_equiv.symm.to_linear_map)
+variables (F 𝕂)
+def L1_extend_from_ℝ (T : (α →₁ₛ[μ] ℝ) →ₗ[ℝ] (α →₁[μ] ℝ)) : (α →₁ₛ[μ] F) →ₗ[𝕂] (α →₁[μ] F) :=
+sorry
+--tensor_to_L1.comp ((linear_map.rtensor G T).comp tensor_to_L1s_equiv.symm.to_linear_map)
+variables {F 𝕂}
 
 lemma norm_simple_func_eq_sum_norm_indicator_L1s (f : α →₁ₛ[μ] G) :
   ∥f∥ = ∑ y in range_nonzero f,
