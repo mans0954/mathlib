@@ -224,7 +224,7 @@ lemma map_one : f 1 = 1 := is_monoid_hom.map_one f
 /-- A group homomorphism sends inverses to inverses. -/
 @[to_additive]
 theorem map_inv (a : α) : f a⁻¹ = (f a)⁻¹ :=
-eq_inv_of_mul_eq_one $ by rw [← map_mul f, inv_mul_self, map_one f]
+eq_inv_of_mul_eq_one $ by rw [← is_mul_hom.map_mul f, inv_mul_self, map_one f]
 
 /-- The identity is a group homomorphism. -/
 @[to_additive]
@@ -241,7 +241,7 @@ lemma injective_iff (f : α → β) [is_group_hom f] :
   function.injective f ↔ (∀ a, f a = 1 → a = 1) :=
 ⟨λ h _, by rw ← is_group_hom.map_one f; exact @h _ _,
   λ h x y hxy, by rw [← inv_inv (f x), inv_eq_iff_mul_eq_one, ← map_inv f,
-      ← map_mul f] at hxy;
+      ← is_mul_hom.map_mul f] at hxy;
     simpa using inv_eq_of_mul_eq_one (h _ hxy)⟩
 
 /-- The product of group homomorphisms is a group homomorphism if the target is commutative. -/
