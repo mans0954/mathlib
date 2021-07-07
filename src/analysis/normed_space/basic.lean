@@ -1567,6 +1567,21 @@ variables {F : Type*} [normed_group F] [normed_space α F]
 
 open normed_field
 
+/-- While this may appear identical to `normed_space.to_module`, it contains an implicit argument
+involving `normed_group.to_semi_normed_group` that typeclass inference has trouble inferring.
+
+Specifically, the following instance cannot be found without this `normed_space.to_module'`:
+```lean
+example
+  (𝕜 ι : Type*) (E : ι → Type*)
+  [normed_field 𝕜] [Π i, normed_group (E i)] [Π i, normed_space 𝕜 (E i)] :
+  Π i, module 𝕜 (E i) := by apply_instance
+```
+
+[This Zulip thread](https://leanprover.zulipchat.com/#narrow/stream/113488-general/topic/Typeclass.20resolution.20under.20binders/near/245151099)
+gives some more context. -/
+instance normed_space.to_module' : module α F := normed_space.to_module
+
 theorem interior_closed_ball' [normed_space ℝ E] [nontrivial E] (x : E) (r : ℝ) :
   interior (closed_ball x r) = ball x r :=
 begin
