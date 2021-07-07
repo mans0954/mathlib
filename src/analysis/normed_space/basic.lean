@@ -1641,11 +1641,10 @@ begin
   rw [dist_eq_norm, dist_eq_norm, ← ring_hom.map_sub, norm_algebra_map_eq],
 end
 
-variables (𝕜 : Type*) [normed_field 𝕜]
-variables (𝕜' : Type*) [semi_normed_ring 𝕜']
+variables (𝕜 : Type*) (𝕜' : Type*) [normed_field 𝕜]
 
 @[priority 100]
-instance normed_algebra.to_normed_space [h : normed_algebra 𝕜 𝕜'] :
+instance normed_algebra.to_normed_space [semi_normed_ring 𝕜'] [h : normed_algebra 𝕜 𝕜'] :
   normed_space 𝕜 𝕜' :=
 { norm_smul_le := λ s x, calc
     ∥s • x∥ = ∥((algebra_map 𝕜 𝕜') s) * x∥ : by { rw h.smul_def', refl }
@@ -1653,11 +1652,27 @@ instance normed_algebra.to_normed_space [h : normed_algebra 𝕜 𝕜'] :
     ... = ∥s∥ * ∥x∥ : by rw norm_algebra_map_eq,
   ..h }
 
+/-- While this may appear identical to `normed_algebra.to_normed_space`, it contains an implicit
+argument involving `normed_ring.to_semi_normed_ring` that typeclass inference has trouble inferring.
+
+Specifically, the following instance cannot be found without this `normed_space.to_module'`:
+```lean
+example
+  (𝕜 ι : Type*) (E : ι → Type*)
+  [normed_field 𝕜] [Π i, normed_ring (E i)] [Π i, normed_algebra 𝕜 (E i)] :
+  Π i, module 𝕜 (E i) := by apply_instance
+```
+
+See `normed_space.to_module'` for a similar situation. -/
+@[priority 100]
+instance normed_algebra.to_normed_space' [normed_ring 𝕜'] [normed_algebra 𝕜 𝕜'] :
+  normed_space 𝕜 𝕜' := by apply_instance
+
 instance normed_algebra.id : normed_algebra 𝕜 𝕜 :=
 { norm_algebra_map_eq := by simp,
   .. algebra.id 𝕜}
 
-variables (𝕜') [normed_algebra 𝕜 𝕜']
+variables (𝕜') [semi_normed_ring 𝕜'] [normed_algebra 𝕜 𝕜']
 include 𝕜
 
 lemma normed_algebra.norm_one : ∥(1:𝕜')∥ = 1 :=
