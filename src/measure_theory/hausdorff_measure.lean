@@ -595,6 +595,9 @@ end
 lemma dimH_sUnion {S : set (set X)} (hS : countable S) : dimH (⋃₀ S) = ⨆ s ∈ S, dimH s :=
 by rw [sUnion_eq_bUnion, dimH_bUnion hS]
 
+lemma dimH_union (s t : set X) : dimH (s ∪ t) = max (dimH s) (dimH t) :=
+by rw [union_eq_Union, dimH_Union, supr_bool_eq, cond, cond, ennreal.sup_eq_max]
+
 end measure_theory
 
 open_locale measure_theory
