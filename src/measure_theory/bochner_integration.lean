@@ -551,7 +551,7 @@ section indicator_L1s
 variables {s t : set α} {hs : measurable_set s}
   {c : E} {hμsc : c = 0 ∨ μ s < ∞}
 
-lemma is_simple_func_indicator_ae (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞) :
+lemma is_simple_func_indicator_Lp (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞) :
   ∃ (s : α →ₛ E), (ae_eq_fun.mk s s.ae_measurable : α →ₘ[μ] E)
     = indicator_Lp 1 hs c hμsc :=
 begin
@@ -562,7 +562,7 @@ end
 
 /-- Indicator of a set as a `L1.simple_func`. -/
 def indicator_L1s (hs : measurable_set s) (c : E) (hμsc : c = 0 ∨ μ s < ∞) : α →₁ₛ[μ] E :=
-⟨indicator_Lp 1 hs c hμsc, is_simple_func_indicator_ae hs c hμsc⟩
+⟨indicator_Lp 1 hs c hμsc, is_simple_func_indicator_Lp hs c hμsc⟩
 
 lemma indicator_L1s_coe : (indicator_L1s hs c hμsc : α →₁[μ] E) = indicator_Lp 1 hs c hμsc := rfl
 

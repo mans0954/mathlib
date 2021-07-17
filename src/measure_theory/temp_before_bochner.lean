@@ -398,19 +398,25 @@ begin
 end
 
 /-- Indicator of a set as an ` α →ₘ[μ] E`. -/
-def indicator_ae [measurable_space α] (μ : measure α) {s : set α} (hs : measurable_set s) (c : H) :
+def indicator_const_ae [measurable_space α] (μ : measure α) {s : set α} (hs : measurable_set s)
+  (c : H) :
   α →ₘ[μ] H :=
 ae_eq_fun.mk (s.indicator (λ x, c)) ((ae_measurable_indicator_iff hs).mp ae_measurable_const)
 
-lemma ae_measurable_indicator_ae [measurable_space α] (μ : measure α) {s : set α}
+lemma measurable_indicator_const_ae [measurable_space α] {s : set α} (hs : measurable_set s)
+  {c : H} :
+  measurable (s.indicator (λ _, c)) :=
+measurable_const.indicator hs
+
+lemma ae_measurable_indicator_const_ae [measurable_space α] (μ : measure α) {s : set α}
   (hs : measurable_set s) {c : H} :
   ae_measurable (s.indicator (λ _, c)) μ :=
 (ae_measurable_indicator_iff hs).mp ae_measurable_const
 
-lemma indicator_ae_coe [measurable_space α] {μ : measure α} {s : set α} {hs : measurable_set s}
-  {c : H} :
-  ⇑(indicator_ae μ hs c) =ᵐ[μ] s.indicator (λ _, c) :=
-ae_eq_fun.coe_fn_mk (s.indicator (λ _, c)) (ae_measurable_indicator_ae μ hs)
+lemma indicator_const_ae_coe [measurable_space α] {μ : measure α} {s : set α}
+  {hs : measurable_set s} {c : H} :
+  ⇑(indicator_const_ae μ hs c) =ᵐ[μ] s.indicator (λ _, c) :=
+ae_eq_fun.coe_fn_mk (s.indicator (λ _, c)) (ae_measurable_indicator_const_ae μ hs)
 
 lemma indicator_const_comp {δ} [has_zero γ] [has_zero δ] {s : set α} (c : γ) (f : γ → δ)
   (hf : f 0 = 0) :
@@ -515,10 +521,10 @@ begin
   simp [hp_pos, hμs.ne, not_le.mpr hp_pos, not_lt.mpr hp_pos.le],
 end
 
-lemma mem_ℒp_indicator_ae [measurable_space α] {μ : measure α} {s : set α} (hs : measurable_set s)
-  (c : H) (hμsc : c = 0 ∨ μ s < ∞) :
-  mem_ℒp (indicator_ae μ hs c) p μ :=
-by { rw mem_ℒp_congr_ae indicator_ae_coe, exact mem_ℒp_indicator_const p hs c hμsc }
+lemma mem_ℒp_indicator_const_ae [measurable_space α] {μ : measure α} {s : set α}
+  (hs : measurable_set s) (c : H) (hμsc : c = 0 ∨ μ s < ∞) :
+  mem_ℒp (indicator_const_ae μ hs c) p μ :=
+by { rw mem_ℒp_congr_ae indicator_const_ae_coe, exact mem_ℒp_indicator_const p hs c hμsc }
 
 section indicator_Lp
 variables [measurable_space α] {μ : measure α} {s : set α} {hs : measurable_set s}
@@ -526,14 +532,14 @@ variables [measurable_space α] {μ : measure α} {s : set α} {hs : measurable_
 
 /-- Indicator of a set as an element of `Lp`. -/
 def indicator_Lp (p : ℝ≥0∞) (hs : measurable_set s) (c : G) (hμsc : c = 0 ∨ μ s < ∞) : Lp G p μ :=
-mem_ℒp.to_Lp (indicator_ae μ hs c) (mem_ℒp_indicator_ae hs c hμsc)
+mem_ℒp.to_Lp (indicator_const_ae μ hs c) (mem_ℒp_indicator_const_ae hs c hμsc)
 
-lemma indicator_Lp_coe : ⇑(indicator_Lp p hs c hμsc) =ᵐ[μ] indicator_ae μ hs c :=
-mem_ℒp.coe_fn_to_Lp (mem_ℒp_indicator_ae hs c hμsc)
+lemma indicator_Lp_coe : ⇑(indicator_Lp p hs c hμsc) =ᵐ[μ] indicator_const_ae μ hs c :=
+mem_ℒp.coe_fn_to_Lp (mem_ℒp_indicator_const_ae hs c hμsc)
 
 lemma indicator_Lp_coe_fn (p : ℝ≥0∞) (hs : measurable_set s) (c : G) (hμsc : c = 0 ∨ μ s < ∞) :
   ⇑(indicator_Lp p hs c hμsc) =ᵐ[μ] s.indicator (λ _, c) :=
-indicator_Lp_coe.trans indicator_ae_coe
+indicator_Lp_coe.trans indicator_const_ae_coe
 
 lemma indicator_Lp_coe_fn_mem : ∀ᵐ (x : α) ∂μ, x ∈ s → (indicator_Lp p hs c hμsc x) = c :=
 (indicator_Lp_coe_fn p hs c hμsc).mono (λ x hx hxs, hx.trans (set.indicator_of_mem hxs _))
