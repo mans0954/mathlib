@@ -91,7 +91,7 @@ section emetric
 variables [pseudo_emetric_space α] [pseudo_emetric_space β] [pseudo_emetric_space γ]
 variables {K : ℝ≥0} {f : α → β}
 
-lemma lipschitz_on_with (h : lipschitz_with K f) (s : set α) : lipschitz_on_with K f s :=
+protected lemma lipschitz_on_with (h : lipschitz_with K f) (s : set α) : lipschitz_on_with K f s :=
 λ x _ y _, h x y
 
 lemma edist_le_mul (h : lipschitz_with K f) (x y : α) : edist (f x) (f y) ≤ K * edist x y := h x y
