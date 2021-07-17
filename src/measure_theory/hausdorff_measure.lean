@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
 import topology.metric_space.metric_separated
+import topology.metric_space.holder
 import measure_theory.borel_space
 import analysis.special_functions.pow
 
@@ -514,6 +515,22 @@ begin
   { rw hs, exact le_top }
 end
 
+@[simp] lemma hausdorff_measure_singleton (d : ℝ) (x : X) :
+  μH[d] ({x} : set X) = 0 :=
+begin
+  rw [← nonpos_iff_eq_zero, hausdorff_measure_apply'],
+  refine bsupr_le (λ ε ε0, binfi_le_of_le (λ n, {x}) _ (infi_le_of_le (λ n, _) _)),
+  { exact subset_Union (λ n, {x} : ℕ → set X) 0 },
+  { simp only [emetric.diam_singleton, zero_le] },
+  { simp }
+end
+
+lemma hausdorff_measure_of_subsingleton {s : set X} (hs : s.subsingleton) (d : ℝ) :
+  μH[d] s = 0 :=
+hs.induction_on measure_empty (hausdorff_measure_singleton d)
+
+alias hausdorff_measure_of_subsingleton ← set.subsingleton.hausdorff_measure_eq
+
 end measure
 
 open_locale measure_theory
@@ -532,6 +549,10 @@ begin
   exact (ennreal.zero_ne_top $ h.symm.trans hsd').elim
 end
 
+lemma le_dimH_of_hausdorff_measure_eq_top {s : set X} {d : ℝ≥0} (h : μH[d] s = ∞) :
+  ↑d ≤ dimH s :=
+le_bsupr d h
+
 lemma hausdorff_measure_of_dimH_lt {s : set X} {d : ℝ≥0}
   (h : dimH s < d) : μH[d] s = 0 :=
 begin
@@ -546,4 +567,184 @@ lemma measure_zero_of_dimH_lt {μ : measure X} {d : ℝ≥0}
   μ s = 0 :=
 h $ hausdorff_measure_of_dimH_lt hd
 
+@[mono] lemma dimH_mono {s t : set X} (h : s ⊆ t) : dimH s ≤ dimH t :=
+bsupr_le $ λ d hd, le_dimH_of_hausdorff_measure_eq_top $
+  top_unique $ hd ▸ measure_mono h
+
+@[simp] lemma dimH_Union [encodable ι] (s : ι → set X) :
+  dimH (⋃ i, s i) = ⨆ i, dimH (s i) :=
+begin
+  refine le_antisymm (bsupr_le $ λ d hd, _) (supr_le $ λ i, dimH_mono $ subset_Union _ _),
+  contrapose! hd,
+  have : ∀ i, μH[d] (s i) = 0,
+    from λ i, hausdorff_measure_of_dimH_lt ((le_supr (λ i, dimH (s i)) i).trans_lt hd),
+  rw measure_Union_null this,
+  exact ennreal.zero_ne_top
+end
+
+lemma dimH_bUnion {s : set ι} (hs : countable s) (t : ι → set X) :
+  dimH (⋃ i ∈ s, t i) = ⨆ i ∈ s, dimH (t i) :=
+begin
+  haveI := hs.to_encodable,
+  rw [← Union_subtype, dimH_Union, ← supr_subtype'']
+end
+
+lemma dimH_sUnion {S : set (set X)} (hS : countable S) : dimH (⋃₀ S) = ⨆ s ∈ S, dimH s :=
+by rw [sUnion_eq_bUnion, dimH_bUnion hS]
+
 end measure_theory
+
+open_locale measure_theory
+open measure_theory measure_theory.measure
+
+variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
+
+namespace holder_on_with
+
+variables {C r : ℝ≥0} {f : X → Y} {s t : set X}
+
+lemma hausdorff_measure_image_le (h : holder_on_with C r f s) (hr : 0 < r) {d : ℝ} (hd : 0 ≤ d) :
+  μH[d] (f '' s) ≤ C ^ d * μH[r * d] s :=
+begin
+  -- We start with the trivial case `C = 0`
+  rcases (zero_le C).eq_or_lt with rfl|hC0,
+  { have : (f '' s).subsingleton, by simpa [diam_eq_zero_iff] using h.ediam_image_le,
+    rw this.hausdorff_measure_eq,
+    exact zero_le _ },
+  { have hCd0 : (C : ℝ≥0∞) ^ d ≠ 0, by simp [hC0.ne'],
+    have hCd : (C : ℝ≥0∞) ^ d ≠ ∞, by simp [hd],
+    simp only [hausdorff_measure_apply', ennreal.mul_supr, ennreal.mul_infi_of_ne hCd0 hCd,
+      ← ennreal.tsum_mul_left],
+    refine supr_le (λ R, supr_le $ λ hR, _),
+    have : tendsto (λ d : ℝ≥0∞, (C : ℝ≥0∞) * d ^ (r : ℝ)) (𝓝 0) (𝓝 0),
+      from ennreal.tendsto_const_mul_rpow_nhds_zero_of_pos ennreal.coe_ne_top hr,
+    rcases ennreal.nhds_zero_basis_Iic.eventually_iff.1 (this.eventually (gt_mem_nhds hR))
+      with ⟨δ, δ0, H⟩,
+    refine le_supr_of_le δ (le_supr_of_le δ0 $ le_binfi $ λ t hst, le_infi $ λ htδ, _),
+    refine binfi_le_of_le (λ n, f '' (t n ∩ s)) _ (infi_le_of_le (λ n, _) _),
+    { rw [← image_Union, ← Union_inter],
+      exact image_subset _ (subset_inter hst subset.rfl) },
+    { exact (h.ediam_image_inter_le (t n)).trans (H (htδ n)).le },
+    { refine ennreal.tsum_le_tsum (λ n, supr_le $ λ hft,
+        le_supr_of_le (λ ht, hft $ (ht.mono (inter_subset_left _ _)).image f) _),
+      rw [ennreal.rpow_mul, ← ennreal.mul_rpow_of_nonneg _ _ hd],
+      exact ennreal.rpow_le_rpow (h.ediam_image_inter_le _) hd } }
+end
+
+/-- If `f` is a Hölder continuous map with exponent `r > 0`, then for any set `s` in the domain of
+`f`, the Hausdorff dimension of its image `f '' s` is at most the Hausdorff dimension of `s` divided
+by `r`. -/
+lemma dimH_image_le (h : holder_on_with C r f s) (hr : 0 < r) :
+  dimH (f '' s) ≤ dimH s / r :=
+begin
+  refine bsupr_le (λ d hd, _),
+  have := h.hausdorff_measure_image_le hr d.coe_nonneg,
+  rw [hd, ennreal.coe_rpow_of_nonneg _ d.coe_nonneg, top_le_iff] at this,
+  have Hrd : μH[(r * d : ℝ≥0)] s = ⊤,
+  { contrapose this, exact ennreal.mul_ne_top ennreal.coe_ne_top this },
+  rw [ennreal.le_div_iff_mul_le, mul_comm, ← ennreal.coe_mul],
+  exacts [le_dimH_of_hausdorff_measure_eq_top Hrd, or.inl (mt ennreal.coe_eq_zero.1 hr.ne'),
+    or.inl ennreal.coe_ne_top]
+end
+
+lemma dimH_image_le_of_subset (h : holder_on_with C r f s) (hr : 0 < r) (ht : t ⊆ s) :
+  dimH (f '' t) ≤ dimH t / r :=
+(h.mono ht).dimH_image_le hr
+
+end holder_on_with
+
+namespace holder_with
+
+variables {C r : ℝ≥0} {f : X → Y} {s : set X}
+
+lemma dimH_image_le (h : holder_with C r f) (hr : 0 < r) (s : set X) :
+  dimH (f '' s) ≤ dimH s / r :=
+(h.holder_on_with s).dimH_image_le hr
+
+/-- If `f` is a Hölder continuous map with exponent `r > 0`, then the Hausdorff dimension of its
+range is at most the Hausdorff dimension of its domain divided by `r`. -/
+lemma dimH_range_le (h : holder_with C r f) (hr : 0 < r) :
+  dimH (range f) ≤ dimH (univ : set X) / r :=
+@image_univ _ _ f ▸ h.dimH_image_le hr univ
+
+end holder_with
+
+lemma dimH_image_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
+  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (t ∈ 𝓝[s] x) (C : ℝ≥0), holder_on_with C r f t) :
+  dimH (f '' s) ≤ dimH s / r :=
+begin
+  choose! t htn C hC using hf,
+  rcases countable_cover_nhds_within_of_sigma_compact hs htn with ⟨u, hus, huc, huU⟩,
+  replace huU := inter_eq_self_of_subset_left huU, rw inter_bUnion at huU,
+  rw [← huU, image_bUnion, dimH_bUnion huc, dimH_bUnion huc], simp only [ennreal.supr_div],
+  exact bsupr_le_bsupr (λ x hx, ((hC x (hus hx)).mono (inter_subset_right _ _)).dimH_image_le hr)
+end
+
+lemma dimH_range_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
+  (hf : ∀ x : X, ∃ (s ∈ 𝓝 x) (C : ℝ≥0), holder_on_with C r f s) :
+  dimH (range f) ≤ dimH (univ : set X) / r :=
+begin
+  rw ← image_univ,
+  refine dimH_image_le_of_locally_holder_on hr is_closed_univ (λ x _, _),
+  simpa only [exists_prop, nhds_within_univ] using hf x
+end
+
+namespace lipschitz_on_with
+
+variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
+  {K : ℝ≥0} {f : X → Y} {s t : set X}
+
+/-- If `f` is a Lipschitz continuous map, then for any set `s` in the domain of `f`, the Hausdorff
+dimension of its image `f '' s` is at most the Hausdorff dimension of `s`. -/
+lemma dimH_image_le (h : lipschitz_on_with K f s) : dimH (f '' s) ≤ dimH s :=
+by simpa using h.holder_on_with.dimH_image_le zero_lt_one
+
+lemma dimH_image_le_of_subset (h : lipschitz_on_with K f s) (ht : t ⊆ s) :
+  dimH (f '' t) ≤ dimH t :=
+(h.mono ht).dimH_image_le
+
+end lipschitz_on_with
+
+namespace lipschitz_with
+
+variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
+  {K : ℝ≥0} {f : X → Y}
+
+/-- If `f` is a Lipschitz continuous map, then for any set `s` in the domain of `f`, the Hausdorff
+dimension of its image `f '' s` is at most the Hausdorff dimension of `s`. -/
+lemma dimH_image_le (h : lipschitz_with K f) (s : set X) : dimH (f '' s) ≤ dimH s :=
+(h.lipschitz_on_with s).dimH_image_le
+
+/-- If `f` is a Lipschitz continuous map, then the Hausdorff dimension of its range is at most the
+Hausdorff dimension of its domain. -/
+lemma dimH_range_le (h : lipschitz_with K f) : dimH (range f) ≤ dimH (univ : set X) :=
+@image_univ _ _ f ▸ h.dimH_image_le univ
+
+end lipschitz_with
+
+lemma dimH_image_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
+  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (t ∈ 𝓝[s] x) (C : ℝ≥0), lipschitz_on_with C f t) :
+  dimH (f '' s) ≤ dimH s :=
+by simpa only [ennreal.coe_one, ennreal.div_one]
+  using dimH_image_le_of_locally_holder_on zero_lt_one hs
+    (by simpa only [holder_on_with_one] using hf)
+
+lemma dimH_range_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
+  (hf : ∀ x : X, ∃ (s ∈ 𝓝 x) (C : ℝ≥0), lipschitz_on_with C f s) :
+  dimH (range f) ≤ dimH (univ : set X) :=
+begin
+  rw ← image_univ,
+  refine dimH_image_le_of_locally_lipschitz_on is_closed_univ (λ x _, _),
+  simpa only [exists_prop, nhds_within_univ] using hf x
+end
+
+variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space E] [borel_space E]
+  [normed_group F] [normed_space ℝ F] [measurable_space F] [borel_space F]
+
+lemma times_cont_diff_on.dimH_image_le [finite_dimensional ℝ E]
+  {f : E → F} {s : set E} (h₁ : is_closed s) (h₂ : convex s) (hf : times_cont_diff_on ℝ 1 f s) :
+  dimH (f '' s) ≤ dimH s :=
+begin
+  refine dimH_image_le_of_locally_lipschitz_on h₁ (λ x hx, _),
+  
+end
