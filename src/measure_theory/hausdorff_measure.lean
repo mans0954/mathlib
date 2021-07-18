@@ -615,8 +615,9 @@ begin
   -- We start with the trivial case `C = 0`
   rcases (zero_le C).eq_or_lt with rfl|hC0,
   { have : (f '' s).subsingleton, by simpa [diam_eq_zero_iff] using h.ediam_image_le,
-    rw this.hausdorff_measure_eq,
-    exact zero_le _ },
+    rw this.measure_eq,
+    { exact zero_le _ },
+    { apply_instance } },
   { have hCd0 : (C : ℝ≥0∞) ^ d ≠ 0, by simp [hC0.ne'],
     have hCd : (C : ℝ≥0∞) ^ d ≠ ∞, by simp [hd],
     simp only [hausdorff_measure_apply', ennreal.mul_supr, ennreal.mul_infi_of_ne hCd0 hCd,
@@ -676,10 +677,10 @@ lemma dimH_range_le (h : holder_with C r f) (hr : 0 < r) :
 end holder_with
 
 lemma dimH_image_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
-  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (t ∈ 𝓝[s] x) (C : ℝ≥0), holder_on_with C r f t) :
+  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (C : ℝ≥0) (t ∈ 𝓝[s] x), holder_on_with C r f t) :
   dimH (f '' s) ≤ dimH s / r :=
 begin
-  choose! t htn C hC using hf,
+  choose! C t htn hC using hf,
   rcases countable_cover_nhds_within_of_sigma_compact hs htn with ⟨u, hus, huc, huU⟩,
   replace huU := inter_eq_self_of_subset_left huU, rw inter_bUnion at huU,
   rw [← huU, image_bUnion, dimH_bUnion huc, dimH_bUnion huc], simp only [ennreal.supr_div],
@@ -687,7 +688,7 @@ begin
 end
 
 lemma dimH_range_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
-  (hf : ∀ x : X, ∃ (s ∈ 𝓝 x) (C : ℝ≥0), holder_on_with C r f s) :
+  (hf : ∀ x : X, ∃ (C : ℝ≥0) (s ∈ 𝓝 x), holder_on_with C r f s) :
   dimH (range f) ≤ dimH (univ : set X) / r :=
 begin
   rw ← image_univ,
@@ -729,14 +730,14 @@ lemma dimH_range_le (h : lipschitz_with K f) : dimH (range f) ≤ dimH (univ : s
 end lipschitz_with
 
 lemma dimH_image_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
-  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (t ∈ 𝓝[s] x) (C : ℝ≥0), lipschitz_on_with C f t) :
+  {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (C : ℝ≥0) (t ∈ 𝓝[s] x), lipschitz_on_with C f t) :
   dimH (f '' s) ≤ dimH s :=
 by simpa only [ennreal.coe_one, ennreal.div_one]
   using dimH_image_le_of_locally_holder_on zero_lt_one hs
     (by simpa only [holder_on_with_one] using hf)
 
 lemma dimH_range_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
-  (hf : ∀ x : X, ∃ (s ∈ 𝓝 x) (C : ℝ≥0), lipschitz_on_with C f s) :
+  (hf : ∀ x : X, ∃ (C : ℝ≥0) (s ∈ 𝓝 x), lipschitz_on_with C f s) :
   dimH (range f) ≤ dimH (univ : set X) :=
 begin
   rw ← image_univ,
@@ -750,7 +751,10 @@ variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space 
 lemma times_cont_diff_on.dimH_image_le [finite_dimensional ℝ E]
   {f : E → F} {s : set E} (h₁ : is_closed s) (h₂ : convex s) (hf : times_cont_diff_on ℝ 1 f s) :
   dimH (f '' s) ≤ dimH s :=
-begin
-  refine dimH_image_le_of_locally_lipschitz_on h₁ (λ x hx, _),
-  
-end
+dimH_image_le_of_locally_lipschitz_on h₁ $ λ x hx, ((hf x hx).exists_lipschitz_on_with h₂)
+
+lemma times_cont_diff.dimH_range_le [finite_dimensional ℝ E] {f : E → F}
+  (h : times_cont_diff ℝ 1 f) :
+  dimH (range f) ≤ dimH (univ : set E) :=
+dimH_range_le_of_locally_lipschitz_on $ λ x, (no_top ∥fderiv ℝ f x∥₊).imp $
+  λ K hK, h.times_cont_diff_at.exists_lipschitz_on_with hK
