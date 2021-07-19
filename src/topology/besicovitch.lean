@@ -2,15 +2,14 @@ import topology.metric_space.basic
 
 universe u
 
+namespace besicovitch
+
+structure package (α : Type*)
+
+
 variables {α : Type*} [metric_space α] {β : Type u} [nonempty β]
 (c : β → α) (r : β → ℝ) (τ : ℝ)
 
-def Inf (s : set (ordinal.{u})) : ordinal.{u} :=
-begin
-
-end
-
-#exit
 
 
 include c r τ
