@@ -701,6 +701,12 @@ end⟩⟩
 
 instance : has_well_founded ordinal := ⟨(<), wf⟩
 
+/-- Reformulation of well founded induction on ordinals as a lemma that works with the
+`induction` tactic, as in `induction i using ordinal.induction with i IH`. -/
+lemma induction {p : ordinal.{u} → Prop} (i : ordinal.{u})
+  (h : ∀ j, (∀ k, k < j → p k) → p j) : p i :=
+ordinal.wf.induction i h
+
 /-- Principal segment version of the `typein` function, embedding a well order into
   ordinals as a principal segment. -/
 def typein.principal_seg {α : Type u} (r : α → α → Prop) [is_well_order α r] :
