@@ -1126,6 +1126,9 @@ lemma Inf_mem {s : set ordinal} (hs : s.nonempty) :
   Inf s ∈ s :=
 by { rw Inf_eq_omin hs, exact omin_mem _ hs }
 
+instance : no_top_order ordinal :=
+⟨λ a, ⟨a.succ, lt_succ_self a⟩⟩
+
 end ordinal
 
 /-! ### Representing a cardinal with an ordinal -/
