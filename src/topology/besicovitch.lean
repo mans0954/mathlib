@@ -5,6 +5,7 @@ Authors: Sébastien Gouëzel
 -/
 import topology.metric_space.basic
 import tactic.induction
+import analysis.normed_space.basic
 
 /-!
 # Besicovitch covering lemma
@@ -17,6 +18,11 @@ universe u
 open metric set
 
 noncomputable theory
+
+lemma zoug {E : Type*} [normed_group E]
+
+
+#exit
 
 
 namespace besicovitch
