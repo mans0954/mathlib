@@ -255,11 +255,7 @@ lemma cInf_upper_bounds_eq_cSup {s : set α} (h : bdd_above s) (hs : s.nonempty)
 (is_glb_cInf h $ hs.mono $ λ x hx y hy, hy hx).unique (is_lub_cSup hs h).is_glb
 
 lemma not_mem_of_lt_cInf {x : α} {s : set α} (h : x < Inf s) (hs : bdd_below s) : x ∉ s :=
-begin
-  rcases eq_empty_or_nonempty s with rfl|H,
-  { apply not_mem_empty },
-  { assume hx, exact lt_irrefl _ (h.trans_le (cInf_le hs hx)), }
-end
+λ hx, lt_irrefl _ (h.trans_le (cInf_le hs hx))
 
 lemma not_mem_of_cSup_lt {x : α} {s : set α} (h : Sup s < x) (hs : bdd_above s) : x ∉ s :=
 @not_mem_of_lt_cInf (order_dual α) _ x s h hs
