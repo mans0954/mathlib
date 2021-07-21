@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Yury Kudryashov
 -/
 import measure_theory.pi
+import analysis.normed_space.euclidean_dist
 
 /-!
 # Lebesgue measure on the real line and on `ℝⁿ`
@@ -337,7 +338,7 @@ lemma volume_pi_Ico {a b : ι → ℝ} :
 by simp only [volume_pi_Ico, ennreal.to_real_prod, ennreal.to_real_of_real (sub_nonneg.2 (h _))]
 
 /-!
-### Images of the Lebesgue measure under translation/multiplication/...
+### Images of the Lebesgue measure under translation/multiplication/... in ℝ
 -/
 
 lemma map_volume_add_left (a : ℝ) : measure.map ((+) a) volume = volume :=
@@ -379,6 +380,51 @@ by simpa only [mul_comm] using real.map_volume_mul_left h
 eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
   by simp [show measure.map has_neg.neg volume (Ioo (p : ℝ) q) = _,
     from measure.map_apply measurable_neg measurable_set_Ioo]
+
+/-!
+### Images of the Lebesgue measure under translation/multiplication/... in ℝ^n
+-/
+
+lemma map_volume_add_left (a : ι → ℝ) : measure.map ((+) a) volume = volume :=
+eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
+  by simp [measure.map_apply (measurable_const_add a) measurable_set_Ioo, sub_sub_sub_cancel_right]
+
+lemma map_volume_add_right (a : ℝ) : measure.map (+ a) volume = volume :=
+by simpa only [add_comm] using real.map_volume_add_left a
+
+lemma smul_map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
+  ennreal.of_real (abs a) • measure.map ((*) a) volume = volume :=
+begin
+  refine (real.measure_ext_Ioo_rat $ λ p q, _).symm,
+  cases lt_or_gt_of_ne h with h h,
+  { simp only [real.volume_Ioo, measure.smul_apply, ← ennreal.of_real_mul (le_of_lt $ neg_pos.2 h),
+      measure.map_apply (measurable_const_mul a) measurable_set_Ioo, neg_sub_neg,
+      ← neg_mul_eq_neg_mul, preimage_const_mul_Ioo_of_neg _ _ h, abs_of_neg h, mul_sub,
+      mul_div_cancel' _ (ne_of_lt h)] },
+  { simp only [real.volume_Ioo, measure.smul_apply, ← ennreal.of_real_mul (le_of_lt h),
+      measure.map_apply (measurable_const_mul a) measurable_set_Ioo, preimage_const_mul_Ioo _ _ h,
+      abs_of_pos h, mul_sub, mul_div_cancel' _ (ne_of_gt h)] }
+end
+
+lemma map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
+  measure.map ((*) a) volume = ennreal.of_real (abs a⁻¹) • volume :=
+by conv_rhs { rw [← real.smul_map_volume_mul_left h, smul_smul,
+  ← ennreal.of_real_mul (abs_nonneg _), ← abs_mul, inv_mul_cancel h, abs_one, ennreal.of_real_one,
+  one_smul] }
+
+lemma smul_map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
+  ennreal.of_real (abs a) • measure.map (* a) volume = volume :=
+by simpa only [mul_comm] using real.smul_map_volume_mul_left h
+
+lemma map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
+  measure.map (* a) volume = ennreal.of_real (abs a⁻¹) • volume :=
+by simpa only [mul_comm] using real.map_volume_mul_left h
+
+@[simp] lemma map_volume_neg : measure.map has_neg.neg (volume : measure ℝ) = volume :=
+eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
+  by simp [show measure.map has_neg.neg volume (Ioo (p : ℝ) q) = _,
+    from measure.map_apply measurable_neg measurable_set_Ioo]
+
 
 end real
 
@@ -499,6 +545,31 @@ volume_region_between_eq_integral' f_int g_int hs
   ((ae_restrict_iff' hs).mpr (eventually_of_forall hfg))
 
 end region_between
+
+/-!
+### Finite dimensional spaces
+
+In any finite dimensional real vector space, one can define a Lebesgue measure by using a linear
+isomorphism with a Pi type. It is not canonical as it is not normalized.
+-/
+section finite_dimensional
+
+open finite_dimensional
+
+variables {E : Type*} [normed_group E] [normed_space ℝ E] [finite_dimensional ℝ E]
+[measurable_space E] [borel_space E]
+
+instance : is_noetherian ℝ ℝ := by apply_instance
+
+@[irreducible] def to_Pi_cle : E ≃L[ℝ] (fin (finrank ℝ E) → ℝ) :=
+continuous_linear_equiv.of_finrank_eq (finrank_fin_fun _).symm
+
+/-- A Lebesgue measure on any finite-dimensional real vector space (only well defined up to
+normalization, we make an arbitrary choice here). -/
+@[irreducible] def lebesgue : measure E :=
+measure.map to_Pi_cle.symm volume
+
+end finite_dimensional
 
 /-
 section vitali

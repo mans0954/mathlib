@@ -6,6 +6,8 @@ Authors: Sébastien Gouëzel
 import topology.metric_space.basic
 import tactic.induction
 import analysis.normed_space.basic
+import analysis.normed_space.finite_dimension
+import measure_theory.lebesgue_measure
 
 /-!
 # Besicovitch covering lemma
@@ -15,11 +17,80 @@ We prove the Besicovitch covering lemma.
 -/
 
 universe u
-open metric set
+open metric set finite_dimensional
 
 noncomputable theory
 
-lemma zoug {E : Type*} [normed_group E]
+def besicovitch_constant (E : Type*) [normed_group E] [normed_space ℝ E] :=
+Sup {N | ∃ s : finset E, s.card = N ∧ (∀ c ∈ s, ∥c∥ ≤ 2) ∧ (∀ c ∈ s, ∀ d ∈ s, c ≠ d → 1 ≤ ∥c - d∥)}
+
+lemma besicovitch.card_le_of_separated {E : Type*} [normed_group E] [normed_space ℝ E]
+  [finite_dimensional ℝ E]
+  (s : finset E) (hs : ∀ c ∈ s, ∥c∥ ≤ 2) (h : ∀ (c ∈ s) (d ∈ s), c ≠ d → 1 ≤ ∥c - d∥) :
+  s.card ≤ 5 ^ (finrank ℝ E) :=
+begin
+  letI : measurable_space E := borel E,
+  letI : borel_space E := ⟨rfl⟩,
+  let δ : ℝ := (1 : ℝ)/2,
+  let A := ⋃ (c ∈ s), ball (c : E) δ,
+  have : pairwise (disjoint on (λ (c : s), ball (c : E) δ)),
+  { rintros c d hcd x ⟨hxi, hxj⟩,
+    apply (lt_irrefl (1 : ℝ) _).elim,
+    calc 1 ≤ ∥(c : E) - d∥ : h _ c.2 _ d.2 (subtype.val_injective.ne hcd)
+    ... ≤ ∥(c : E) - x∥ + ∥(x : E) - d∥ :
+      by { apply le_trans (le_of_eq _) (norm_add_le _ _), congr' 1, abel }
+    ... < δ + δ : add_lt_add (mem_ball_iff_norm'.1 hxi) (mem_ball_iff_norm.1 hxj)
+    ... = 1 : by norm_num },
+  have : measurable_set A :=
+    finset.measurable_set_bUnion _ (λ c hc, measurable_set_ball),
+  have : volume A = 0,
+end
+
+
+#exit
+
+lemma besicovitch_constant_le {E : Type*} [normed_group E] [normed_space ℝ E]
+  [finite_dimensional ℝ E]
+  (s : finset E) (hs : ∀ c ∈ s, ∥c∥ ≤ 2) (h : ∀ (c ∈ s) (d ∈ s), c ≠ d → 1 ≤ ∥c - d∥) :
+  s.card ≤ besicovitch_constant E :=
+begin
+  apply le_cSup,
+  sorry,
+  simp only [mem_set_of_eq, ne.def],
+  exact ⟨s, rfl, hs, h⟩,
+end
+
+
+#exit
+
+
+lemma zoug {E : Type*} [normed_group E] [normed_space ℝ E] {N : ℕ} (c : ℕ → E) (r : ℕ → ℝ)
+  (δ : ℝ) (τ : ℝ)
+  (hcN : c N = 0)
+  (hrN : r N = 1)
+  (hcr : ∀ i < N, ∥c i∥ ≤ r i + r 1)
+  (hcr' : ∀ i < N, r i ≤ ∥c i∥)
+  (hc : ∀ (i ≤ N) (j ≤ N),
+    (r i ≤ ∥c j - c i∥ ∧ r j ≤ τ * r i) ∨ (r j ≤ ∥c i - c j∥ ∧ r i ≤ τ * r j)) :
+  ∃ (c' : ℕ → E), (∀ n ≤ N, ∥c' n∥ ≤ 2) ∧ (∀ i ≤ N, ∀ j ≤ N, i ≠ j → 1 - δ ≤ ∥c' i - c' j∥) :=
+begin
+  let c' : ℕ → E := λ i, if ∥c i∥ ≤ 2 then c i else (2 / ∥c i∥) • c i,
+  have norm_c'_le : ∀ i, ∥c' i∥ ≤ 2,
+  { assume i,
+    simp only [c'],
+    split_ifs, { exact h },
+    by_cases hi : ∥c i∥ = 0;
+    field_simp [norm_smul, hi] },
+  refine ⟨c', λ n hn, norm_c'_le n, _⟩,
+  assume i hi j hj hij,
+  by_cases H : ∥c i∥ ≤ 2 ∧ ∥c j∥ ≤ 2,
+  { simp only [c'],
+    simp [c', H.1, H.2],
+
+
+  } ,
+end
+
 
 
 #exit
