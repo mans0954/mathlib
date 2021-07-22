@@ -345,8 +345,16 @@ lemma map_volume_add_left (a : ℝ) : measure.map ((+) a) volume = volume :=
 eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
   by simp [measure.map_apply (measurable_const_add a) measurable_set_Ioo, sub_sub_sub_cancel_right]
 
+@[simp] lemma volume_preimage_add_left (a : ℝ) (s : set ℝ) : volume (((+) a) ⁻¹' s) = volume s :=
+calc volume (((+) a) ⁻¹' s) = measure.map ((+) a) volume s :
+  ((homeomorph.add_left a).to_measurable_equiv.map_apply s).symm
+... = volume s : by rw map_volume_add_left
+
 lemma map_volume_add_right (a : ℝ) : measure.map (+ a) volume = volume :=
 by simpa only [add_comm] using real.map_volume_add_left a
+
+@[simp] lemma volume_preimage_add_right (a : ℝ) (s : set ℝ) : volume ((+ a) ⁻¹' s) = volume s :=
+by simpa only [add_comm] using real.volume_preimage_add_left a s
 
 lemma smul_map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
   ennreal.of_real (abs a) • measure.map ((*) a) volume = volume :=
@@ -385,12 +393,34 @@ eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
 ### Images of the Lebesgue measure under translation/multiplication/... in ℝ^n
 -/
 
-lemma map_volume_add_left (a : ι → ℝ) : measure.map ((+) a) volume = volume :=
-eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
-  by simp [measure.map_apply (measurable_const_add a) measurable_set_Ioo, sub_sub_sub_cancel_right]
+lemma map_volume_Pi_add_left (a : ι → ℝ) : measure.map ((+) a) volume = volume :=
+begin
+  symmetry,
+  apply measure.pi_eq,
+  assume s hs,
+  rw measure.map_apply (measurable_const_add a) (measurable_set.univ_pi_fintype hs),
+  have : has_add.add a ⁻¹' (set.pi univ (λ (i : ι), s i))
+    = set.pi univ (λ (i : ι), ((+) (a i)) ⁻¹' (s i)), by { ext, simp },
+  rw [this, volume_pi_pi],
+  { simp only [volume_preimage_add_left] },
+  { exact λ i, measurable_const_add (a i) (hs i) }
+end
 
-lemma map_volume_add_right (a : ℝ) : measure.map (+ a) volume = volume :=
-by simpa only [add_comm] using real.map_volume_add_left a
+lemma volume_Pi_preimage_add_left (a : ι → ℝ) (s : set (ι → ℝ)) :
+  volume (((+) a) ⁻¹' s) = volume s :=
+calc volume (((+) a) ⁻¹' s) = measure.map ((+) a) volume s :
+  ((homeomorph.add_left a).to_measurable_equiv.map_apply s).symm
+... = volume s : by rw map_volume_Pi_add_left
+
+lemma map_volume_Pi_add_right (a : ι → ℝ) : measure.map (+ a) volume = volume :=
+by simpa only [add_comm] using real.map_volume_Pi_add_left a
+
+lemma volume_Pi_preimage_add_right (a : ι → ℝ) (s : set (ι → ℝ)) :
+  volume ((+ a) ⁻¹' s) = volume s :=
+by simpa only [add_comm] using real.volume_Pi_preimage_add_left a s
+
+
+#exit
 
 lemma smul_map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
   ennreal.of_real (abs a) • measure.map ((*) a) volume = volume :=
