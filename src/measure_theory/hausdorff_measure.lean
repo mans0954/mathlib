@@ -701,6 +701,11 @@ namespace lipschitz_on_with
 variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
   {K : ℝ≥0} {f : X → Y} {s t : set X}
 
+lemma hausdorff_measure_image_le (h : lipschitz_on_with K f s) {d : ℝ} (hd : 0 ≤ d) :
+  μH[d] (f '' s) ≤ K ^ d * μH[d] s :=
+by simpa only [nnreal.coe_one, one_mul]
+  using h.holder_on_with.hausdorff_measure_image_le zero_lt_one hd
+
 /-- If `f` is a Lipschitz continuous map, then for any set `s` in the domain of `f`, the Hausdorff
 dimension of its image `f '' s` is at most the Hausdorff dimension of `s`. -/
 lemma dimH_image_le (h : lipschitz_on_with K f s) : dimH (f '' s) ≤ dimH s :=
@@ -716,6 +721,10 @@ namespace lipschitz_with
 
 variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
   {K : ℝ≥0} {f : X → Y}
+
+lemma hausdorff_measure_image_le (h : lipschitz_with K f) {d : ℝ} (hd : 0 ≤ d) (s : set X) :
+  μH[d] (f '' s) ≤ K ^ d * μH[d] s :=
+(h.lipschitz_on_with s).hausdorff_measure_image_le hd
 
 /-- If `f` is a Lipschitz continuous map, then for any set `s` in the domain of `f`, the Hausdorff
 dimension of its image `f '' s` is at most the Hausdorff dimension of `s`. -/
