@@ -609,6 +609,8 @@ namespace holder_on_with
 
 variables {C r : ℝ≥0} {f : X → Y} {s t : set X}
 
+/-- If `f : X → Y` is Hölder continuous on `s` with a positive exponent `r`, then
+`μH[d] (f '' s) ≤ C ^ d * μH[r * d] s`. -/
 lemma hausdorff_measure_image_le (h : holder_on_with C r f s) (hr : 0 < r) {d : ℝ} (hd : 0 ≤ d) :
   μH[d] (f '' s) ≤ C ^ d * μH[r * d] s :=
 begin
@@ -654,16 +656,14 @@ begin
     or.inl ennreal.coe_ne_top]
 end
 
-lemma dimH_image_le_of_subset (h : holder_on_with C r f s) (hr : 0 < r) (ht : t ⊆ s) :
-  dimH (f '' t) ≤ dimH t / r :=
-(h.mono ht).dimH_image_le hr
-
 end holder_on_with
 
 namespace holder_with
 
 variables {C r : ℝ≥0} {f : X → Y} {s : set X}
 
+/-- If `f : X → Y` is Hölder continuous with a positive exponent `r`, then the Hausdorff dimension
+of the image of a set `s` is at most `dimH s / r`. -/
 lemma dimH_image_le (h : holder_with C r f) (hr : 0 < r) (s : set X) :
   dimH (f '' s) ≤ dimH s / r :=
 (h.holder_on_with s).dimH_image_le hr
@@ -676,6 +676,10 @@ lemma dimH_range_le (h : holder_with C r f) (hr : 0 < r) :
 
 end holder_with
 
+/-- If `s` is a closed set in a `σ`-compact space `X` and `f : X → Y` is Hölder continuous in a
+neighborhood within `s` of every point `x ∈ s` with the same positive exponent `` but possibly
+different coefficients, then the Hausdorff dimension of the image `f '' s` is at most the Hausdorff
+dimension of `s` divided by `r`. -/
 lemma dimH_image_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
   {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (C : ℝ≥0) (t ∈ 𝓝[s] x), holder_on_with C r f t) :
   dimH (f '' s) ≤ dimH s / r :=
@@ -687,6 +691,9 @@ begin
   exact bsupr_le_bsupr (λ x hx, ((hC x (hus hx)).mono (inter_subset_right _ _)).dimH_image_le hr)
 end
 
+/-- If `f : X → Y` is Hölder continuous in a neighborhood of every point `x : X` with the same
+positive exponent `` but possibly different coefficients, then the Hausdorff dimension of the range
+of `f` is at most the Hausdorff dimension of `X` divided by `r`. -/
 lemma dimH_range_le_of_locally_holder_on [sigma_compact_space X] {r : ℝ≥0} {f : X → Y} (hr : 0 < r)
   (hf : ∀ x : X, ∃ (C : ℝ≥0) (s ∈ 𝓝 x), holder_on_with C r f s) :
   dimH (range f) ≤ dimH (univ : set X) / r :=
@@ -698,9 +705,9 @@ end
 
 namespace lipschitz_on_with
 
-variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
-  {K : ℝ≥0} {f : X → Y} {s t : set X}
+variables {K : ℝ≥0} {f : X → Y} {s t : set X}
 
+/-- If `f : X → Y` is `K`-Lipschitz on `s`, then `μH[d] (f '' s) ≤ K ^ d * μH[d] s`. -/
 lemma hausdorff_measure_image_le (h : lipschitz_on_with K f s) {d : ℝ} (hd : 0 ≤ d) :
   μH[d] (f '' s) ≤ K ^ d * μH[d] s :=
 by simpa only [nnreal.coe_one, one_mul]
@@ -711,17 +718,14 @@ dimension of its image `f '' s` is at most the Hausdorff dimension of `s`. -/
 lemma dimH_image_le (h : lipschitz_on_with K f s) : dimH (f '' s) ≤ dimH s :=
 by simpa using h.holder_on_with.dimH_image_le zero_lt_one
 
-lemma dimH_image_le_of_subset (h : lipschitz_on_with K f s) (ht : t ⊆ s) :
-  dimH (f '' t) ≤ dimH t :=
-(h.mono ht).dimH_image_le
-
 end lipschitz_on_with
 
 namespace lipschitz_with
 
-variables [measurable_space X] [borel_space X] [measurable_space Y] [borel_space Y]
-  {K : ℝ≥0} {f : X → Y}
+variables {K : ℝ≥0} {f : X → Y}
 
+/-- If `f` is a `K`-Lipschitz map, then it increases the Hausdorff `d`-measures of sets at most
+by the factor of `K ^ d`.-/
 lemma hausdorff_measure_image_le (h : lipschitz_with K f) {d : ℝ} (hd : 0 ≤ d) (s : set X) :
   μH[d] (f '' s) ≤ K ^ d * μH[d] s :=
 (h.lipschitz_on_with s).hausdorff_measure_image_le hd
@@ -738,6 +742,9 @@ lemma dimH_range_le (h : lipschitz_with K f) : dimH (range f) ≤ dimH (univ : s
 
 end lipschitz_with
 
+/-- If `s` is a closed set and `f : X → Y` is Lipschitz in a neighborhood within `s` of every point
+`x ∈ s`, then the Hausdorff dimension of the image `f '' s` is at most the Hausdorff dimension of
+`s`. -/
 lemma dimH_image_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
   {s : set X} (hs : is_closed s) (hf : ∀ x ∈ s, ∃ (C : ℝ≥0) (t ∈ 𝓝[s] x), lipschitz_on_with C f t) :
   dimH (f '' s) ≤ dimH s :=
@@ -745,6 +752,8 @@ by simpa only [ennreal.coe_one, ennreal.div_one]
   using dimH_image_le_of_locally_holder_on zero_lt_one hs
     (by simpa only [holder_on_with_one] using hf)
 
+/-- If `f : X → Y` is Lipschitz in a neighborhood of each point `x : X`, then the Hausdorff
+dimension of `range f` is at most the Hausdorff dimension of `X`. -/
 lemma dimH_range_le_of_locally_lipschitz_on [sigma_compact_space X] {f : X → Y}
   (hf : ∀ x : X, ∃ (C : ℝ≥0) (s ∈ 𝓝 x), lipschitz_on_with C f s) :
   dimH (range f) ≤ dimH (univ : set X) :=
@@ -757,13 +766,21 @@ end
 variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space E] [borel_space E]
   [normed_group F] [normed_space ℝ F] [measurable_space F] [borel_space F]
 
+/-- Let `f` be a function defined on a finite dimensional real normed space. If `f` is `C¹`-smooth
+on a closed convex set `s`, then the Hausdorff dimension of `f '' s` is less than or equal to the
+Hausdorff dimension of `s`.
+
+TODO: do we actually need both `is_closed s` and `convex s`? -/
 lemma times_cont_diff_on.dimH_image_le [finite_dimensional ℝ E]
   {f : E → F} {s : set E} (h₁ : is_closed s) (h₂ : convex s) (hf : times_cont_diff_on ℝ 1 f s) :
   dimH (f '' s) ≤ dimH s :=
 dimH_image_le_of_locally_lipschitz_on h₁ $ λ x hx, ((hf x hx).exists_lipschitz_on_with h₂)
 
+/-- The Hausdorff dimension of the range of a `C¹`-smooth function defined on a finite dimensional
+real normed space is at most the Hausdorff dimension of its codomain.
+
+TODO: prove that `dimH (univ : set E) = finrank ℝ E`. -/
 lemma times_cont_diff.dimH_range_le [finite_dimensional ℝ E] {f : E → F}
   (h : times_cont_diff ℝ 1 f) :
   dimH (range f) ≤ dimH (univ : set E) :=
-dimH_range_le_of_locally_lipschitz_on $ λ x, (no_top ∥fderiv ℝ f x∥₊).imp $
-  λ K hK, h.times_cont_diff_at.exists_lipschitz_on_with hK
+dimH_range_le_of_locally_lipschitz_on $ λ x, h.times_cont_diff_at.exists_lipschitz_on_with
