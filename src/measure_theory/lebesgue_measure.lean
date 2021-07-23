@@ -376,6 +376,12 @@ by conv_rhs { rw [← real.smul_map_volume_mul_left h, smul_smul,
   ← ennreal.of_real_mul (abs_nonneg _), ← abs_mul, inv_mul_cancel h, abs_one, ennreal.of_real_one,
   one_smul] }
 
+@[simp] lemma volume_preimage_mul_left {a : ℝ} (h : a ≠ 0) (s : set ℝ) :
+  volume (((*) a) ⁻¹' s) = ennreal.of_real (abs a⁻¹) * volume s :=
+calc volume (((*) a) ⁻¹' s) = measure.map ((*) a) volume s :
+  ((homeomorph.mul_left' a h).to_measurable_equiv.map_apply s).symm
+... = ennreal.of_real (abs a⁻¹) * volume s : by { rw map_volume_mul_left h, refl }
+
 lemma smul_map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
   ennreal.of_real (abs a) • measure.map (* a) volume = volume :=
 by simpa only [mul_comm] using real.smul_map_volume_mul_left h
@@ -383,6 +389,10 @@ by simpa only [mul_comm] using real.smul_map_volume_mul_left h
 lemma map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
   measure.map (* a) volume = ennreal.of_real (abs a⁻¹) • volume :=
 by simpa only [mul_comm] using real.map_volume_mul_left h
+
+@[simp] lemma volume_preimage_mul_right {a : ℝ} (h : a ≠ 0) (s : set ℝ) :
+  volume ((* a) ⁻¹' s) = ennreal.of_real (abs a⁻¹) * volume s :=
+by simpa only [mul_comm] using volume_preimage_mul_left h s
 
 @[simp] lemma map_volume_neg : measure.map has_neg.neg (volume : measure ℝ) = volume :=
 eq.symm $ real.measure_ext_Ioo_rat $ λ p q,
@@ -419,6 +429,26 @@ lemma volume_Pi_preimage_add_right (a : ι → ℝ) (s : set (ι → ℝ)) :
   volume ((+ a) ⁻¹' s) = volume s :=
 by simpa only [add_comm] using real.volume_Pi_preimage_add_left a s
 
+lemma smul_map_volume_Pi_mul_left {a : ℝ} (h : a ≠ 0) :
+  ennreal.of_real ((abs a)^ (fintype.card ι)) • measure.map ((•) a) (volume : measure (ι → ℝ))
+    = volume :=
+begin
+  symmetry,
+  apply measure.pi_eq,
+  assume s hs,
+  simp only [measure.coe_smul, algebra.id.smul_eq_mul, pi.smul_apply],
+  rw measure.map_apply (measurable_const_smul a) (measurable_set.univ_pi_fintype hs),
+  have : (has_scalar.smul a) ⁻¹' (set.pi univ (λ (i : ι), s i))
+    = set.pi univ (λ (i : ι), ((*) a) ⁻¹' (s i)), by { ext, simp, },
+  rw [this, volume_pi_pi],
+  { simp only [volume_preimage_mul_left h],
+    rw ennreal.of_real,
+    rw real.to_nnreal
+
+  }
+
+
+end
 
 #exit
 

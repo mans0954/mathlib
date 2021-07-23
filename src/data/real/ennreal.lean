@@ -1381,6 +1381,10 @@ lemma of_real_div_of_pos {x y : ℝ} (hy : 0 < y) :
 by rw [div_eq_inv_mul, div_eq_mul_inv, of_real_mul (inv_nonneg.2 hy.le), of_real_inv_of_pos hy,
   mul_comm]
 
+lemma of_real_pow_of_nonneg {x : ℝ} (h : 0 ≤ x) (n : ℕ) :
+  ennreal.of_real (x ^ n) = (ennreal.of_real x) ^ n :=
+by rw [ennreal.of_real, ennreal.of_real, real.to_nnreal_pow_of_nonneg h, ennreal.coe_pow]
+
 lemma to_real_of_real_mul (c : ℝ) (a : ℝ≥0∞) (h : 0 ≤ c) :
   ennreal.to_real ((ennreal.of_real c) * a) = c * ennreal.to_real a :=
 begin

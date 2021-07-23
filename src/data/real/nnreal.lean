@@ -224,6 +224,10 @@ begin
   exact finset.prod_congr rfl (λ x hxs, by rw real.coe_to_nnreal _ (hf x hxs)),
 end
 
+lemma _root_.real.to_nnreal_pow_of_nonneg {a : ℝ} (ha : 0 ≤ a) (n : ℕ) :
+  real.to_nnreal (a ^ n) = (real.to_nnreal a) ^ n :=
+by rw [←nnreal.coe_eq, coe_pow, real.coe_to_nnreal _ ha, real.coe_to_nnreal _ (pow_nonneg ha _)]
+
 @[norm_cast] lemma nsmul_coe (r : ℝ≥0) (n : ℕ) : ↑(n • r) = n • (r:ℝ) :=
 to_real_hom.to_add_monoid_hom.map_nsmul _ _
 
