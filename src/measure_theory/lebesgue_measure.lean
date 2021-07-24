@@ -408,7 +408,7 @@ calc volume (has_neg.neg ⁻¹' s) = measure.map (has_neg.neg) volume s :
 ### Images of the Lebesgue measure under translation/multiplication/... in ℝ^n
 -/
 
-lemma map_volume_Pi_add_left (a : ι → ℝ) : measure.map ((+) a) volume = volume :=
+lemma map_volume_pi_add_left (a : ι → ℝ) : measure.map ((+) a) volume = volume :=
 begin
   refine (measure.pi_eq (λ s hs, _)).symm,
   have A : has_add.add a ⁻¹' (set.pi univ (λ (i : ι), s i))
@@ -419,20 +419,20 @@ begin
   { exact λ i, measurable_const_add (a i) (hs i) }
 end
 
-@[simp] lemma volume_Pi_preimage_add_left (a : ι → ℝ) (s : set (ι → ℝ)) :
+@[simp] lemma volume_pi_preimage_add_left (a : ι → ℝ) (s : set (ι → ℝ)) :
   volume (((+) a) ⁻¹' s) = volume s :=
 calc volume (((+) a) ⁻¹' s) = measure.map ((+) a) volume s :
   ((homeomorph.add_left a).to_measurable_equiv.map_apply s).symm
-... = volume s : by rw map_volume_Pi_add_left
+... = volume s : by rw map_volume_pi_add_left
 
-lemma map_volume_Pi_add_right (a : ι → ℝ) : measure.map (+ a) volume = volume :=
-by simpa only [add_comm] using real.map_volume_Pi_add_left a
+lemma map_volume_pi_add_right (a : ι → ℝ) : measure.map (+ a) volume = volume :=
+by simpa only [add_comm] using real.map_volume_pi_add_left a
 
-@[simp] lemma volume_Pi_preimage_add_right (a : ι → ℝ) (s : set (ι → ℝ)) :
+@[simp] lemma volume_pi_preimage_add_right (a : ι → ℝ) (s : set (ι → ℝ)) :
   volume ((+ a) ⁻¹' s) = volume s :=
-by simpa only [add_comm] using real.volume_Pi_preimage_add_left a s
+by simpa only [add_comm] using real.volume_pi_preimage_add_left a s
 
-lemma smul_map_volume_Pi_smul {a : ℝ} (h : a ≠ 0) :
+lemma smul_map_volume_pi_smul {a : ℝ} (h : a ≠ 0) :
   ennreal.of_real ((abs a) ^ (fintype.card ι)) • measure.map ((•) a) (volume : measure (ι → ℝ))
     = volume :=
 begin
@@ -450,21 +450,21 @@ begin
   { exact λ i, measurable_const_mul _ (hs i) }
 end
 
-lemma map_volume_Pi_smul {a : ℝ} (h : a ≠ 0) :
+lemma map_volume_pi_smul {a : ℝ} (h : a ≠ 0) :
   measure.map ((•) a) (volume : measure (ι → ℝ)) =
     ennreal.of_real ((abs a⁻¹) ^ (fintype.card ι)) • volume :=
-by conv_rhs { rw [← real.smul_map_volume_Pi_smul h, smul_smul,
+by conv_rhs { rw [← real.smul_map_volume_pi_smul h, smul_smul,
     ← ennreal.of_real_mul (pow_nonneg (abs_nonneg _) _), ← mul_pow, ← abs_mul, inv_mul_cancel h,
     abs_one, one_pow, ennreal.of_real_one, one_smul] }
 
-@[simp] lemma volume_Pi_preimage_smul {a : ℝ} (h : a ≠ 0) (s : set (ι → ℝ)) :
+@[simp] lemma volume_pi_preimage_smul {a : ℝ} (h : a ≠ 0) (s : set (ι → ℝ)) :
   volume (((•) a) ⁻¹' s) = ennreal.of_real ((abs a⁻¹) ^ (fintype.card ι)) * volume s :=
 calc volume (((•) a) ⁻¹' s) = measure.map ((•) a) volume s :
   ((homeomorph.smul_of_ne_zero a h).to_measurable_equiv.map_apply s).symm
 ... = ennreal.of_real ((abs a⁻¹) ^ (fintype.card ι)) * volume s :
-  by simp only [map_volume_Pi_smul h, measure.coe_smul, algebra.id.smul_eq_mul, pi.smul_apply]
+  by simp only [map_volume_pi_smul h, measure.coe_smul, algebra.id.smul_eq_mul, pi.smul_apply]
 
-lemma map_volume_Pi_neg : measure.map has_neg.neg (volume : measure (ι → ℝ)) = volume :=
+lemma map_volume_pi_neg : measure.map has_neg.neg (volume : measure (ι → ℝ)) = volume :=
 begin
   refine (measure.pi_eq (λ s hs, _)).symm,
   have A : has_neg.neg ⁻¹' (set.pi univ (λ (i : ι), s i))
@@ -475,11 +475,12 @@ begin
   { exact λ i, measurable_neg (hs i) }
 end
 
-@[simp] lemma volume_Pi_preimage_neg (s : set (ι → ℝ)) : volume (- s) = volume s :=
+@[simp] lemma volume_pi_preimage_neg (s : set (ι → ℝ)) : volume (- s) = volume s :=
 calc volume (has_neg.neg ⁻¹' s) = measure.map (has_neg.neg) volume s :
   ((homeomorph.neg _).to_measurable_equiv.map_apply s).symm
-... = volume s : by rw map_volume_Pi_neg
+... = volume s : by rw map_volume_pi_neg
 
+/-
 lemma volume_ball [nonempty ι] (c : (ι → ℝ)) (r : ℝ) :
   volume (metric.ball c r) =
     (ennreal.of_real r) ^ (fintype.card ι) * volume (metric.ball (0 : ι → ℝ) 1) :=
@@ -487,14 +488,47 @@ begin
   rcases le_or_lt r 0 with hr|hr,
   { simp only [metric.ball_eq_empty_iff_nonpos.mpr hr, measure_empty, zero_eq_mul, true_or,
       ennreal.of_real_eq_zero.mpr hr, zero_pow_eq_zero, fintype.card_pos_iff.mpr ‹nonempty ι›] },
-  {
+  { have : metric.ball c r = (+ (-c)) ⁻¹' (((•) (r ⁻¹)) ⁻¹' (metric.ball 0 1)),
+    { ext x,
+      rw mem_ball_iff_norm,
+      simp_rw [mem_ball_0_iff, mem_preimage, ← sub_eq_add_neg, mem_ball_0_iff, norm_smul,
+        norm_eq_abs, abs_inv, abs_of_nonneg hr.le, ← div_eq_inv_mul, div_lt_iff hr, one_mul] },
+    simp only [this, inv_ne_zero hr.ne', abs_of_nonneg hr.le, ennreal.of_real_pow_of_nonneg hr.le,
+      inv_inv', volume_pi_preimage_smul, volume_pi_preimage_add_right, ne.def, not_false_iff] }
+end
+-/
 
-  }
+lemma volume_ball [nonempty ι] (c : (ι → ℝ)) (r : ℝ) :
+  volume (metric.ball c r) = ennreal.of_real (2 * r) ^ (fintype.card ι) :=
+begin
+  rcases le_or_lt r 0 with hr|hr,
+  { have A : 2 * r ≤ 0, from mul_nonpos_of_nonneg_of_nonpos zero_le_two hr,
+    simp [metric.ball_eq_empty_iff_nonpos.mpr hr,  ennreal.of_real_eq_zero.mpr A, zero_pow_eq_zero,
+          zero_pow_eq_zero.2 (fintype.card_pos_iff.mpr ‹nonempty ι›)] },
+  { rw [ball_pi' c hr, volume_pi_pi],
+    { simp [ball_eq_Ioo, ← two_mul, finset.card_univ] },
+    { exact λ i, measurable_set_ball } },
+end
+
+lemma volume_pos_of_nonempty_interior (s : set (ι → ℝ)) (hs : (interior s).nonempty) :
+  0 < volume s :=
+begin
+  rcases is_empty_or_nonempty ι,
+  { resetI,
+    have A : interior s = (univ : set (ι → ℝ)) := subsingleton.eq_univ_of_nonempty hs,
+    refine lt_of_lt_of_le _ (measure_mono (interior_subset)),
+    rw [A, ← pi_univ univ, volume_pi_pi],
+    { simp [ennreal.zero_lt_one] },
+    { assume i, exact measurable_set.univ } },
+  { resetI,
+    rcases hs with ⟨x, hx⟩,
+    rcases metric.mem_nhds_iff.1 (mem_interior_iff_mem_nhds.1 hx) with ⟨r, rpos, hr⟩,
+    apply lt_of_lt_of_le _ (measure_mono hr),
+    rw volume_ball,
+    exact ennreal.pow_pos (ennreal.of_real_pos.2 (mul_pos zero_lt_two rpos)) _ }
 end
 
 end real
-
-#exit
 
 open_locale topological_space
 
@@ -629,13 +663,13 @@ variables {E : Type*} [normed_group E] [normed_space ℝ E] [finite_dimensional 
 
 instance : is_noetherian ℝ ℝ := by apply_instance
 
-@[irreducible] def to_Pi_cle : E ≃L[ℝ] (fin (finrank ℝ E) → ℝ) :=
+@[irreducible] def to_pi_cle : E ≃L[ℝ] (fin (finrank ℝ E) → ℝ) :=
 continuous_linear_equiv.of_finrank_eq (finrank_fin_fun _).symm
 
 /-- A Lebesgue measure on any finite-dimensional real vector space (only well defined up to
 normalization, we make an arbitrary choice here). -/
 @[irreducible] def lebesgue : measure E :=
-measure.map to_Pi_cle.symm volume
+measure.map to_pi_cle.symm volume
 
 end finite_dimensional
 

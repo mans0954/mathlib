@@ -1289,13 +1289,21 @@ by simp only [dist_nndist, nnreal.coe_le_coe, nndist_le_pi_nndist f g b]
 /-- An open ball in a product space is a product of open balls. The assumption `0 < r`
 is necessary for the case of the empty product. -/
 lemma ball_pi (x : Πb, π b) {r : ℝ} (hr : 0 < r) :
-  ball x r = { y | ∀b, y b ∈ ball (x b) r } :=
+  ball x r = {y | ∀ b, y b ∈ ball (x b) r} :=
+by { ext p, simp [dist_pi_lt_iff hr] }
+
+lemma ball_pi' (x : Πb, π b) {r : ℝ} (hr : 0 < r) :
+  ball x r = set.pi univ (λ b, ball (x b) r) :=
 by { ext p, simp [dist_pi_lt_iff hr] }
 
 /-- A closed ball in a product space is a product of closed balls. The assumption `0 ≤ r`
 is necessary for the case of the empty product. -/
 lemma closed_ball_pi (x : Πb, π b) {r : ℝ} (hr : 0 ≤ r) :
-  closed_ball x r = { y | ∀b, y b ∈ closed_ball (x b) r } :=
+  closed_ball x r = {y | ∀ b, y b ∈ closed_ball (x b) r} :=
+by { ext p, simp [dist_pi_le_iff hr] }
+
+lemma closed_ball_pi' (x : Πb, π b) {r : ℝ} (hr : 0 ≤ r) :
+  closed_ball x r = set.pi univ (λ b, closed_ball (x b) r) :=
 by { ext p, simp [dist_pi_le_iff hr] }
 
 end pi
