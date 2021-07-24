@@ -52,7 +52,7 @@ namespace antilipschitz_with
 
 lemma mul_le_nndist (hf : antilipschitz_with K f) (x y : α) :
   K⁻¹ * nndist x y ≤ nndist (f x) (f y) :=
-by simpa only [div_eq_inv_mul] using nnreal.div_le_of_le_mul (hf.le_mul_nndist x y)
+by simpa only [div_eq_inv_mul] using nnreal.div_le_of_le_mul' (hf.le_mul_nndist x y)
 
 lemma mul_le_dist (hf : antilipschitz_with K f) (x y : α) :
   (K⁻¹ * dist x y : ℝ) ≤ dist (f x) (f y) :=
