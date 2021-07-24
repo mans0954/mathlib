@@ -826,15 +826,11 @@ begin
   refine dimH_image_le_of_locally_lipschitz_on is_closed_univ (λ x _, _),
   simpa only [exists_prop, nhds_within_univ] using hf x
 end
-
-#check antilipschitz_with
-lemma antilipschitz_with.
-
 /-!
 ### Isometries preserve the Hausdorff measure and Hausdorff dimension
 -/
 
-lemma isometry.hausdorff_measure_eq {f : X → Y} (hf : isometry f)
+-- lemma isometry.hausdorff_measure_eq {f : X → Y} (hf : isometry f)
 
 /-!
 ### Hausdorff dimension and `C¹`-smooth maps
