@@ -1093,6 +1093,9 @@ begin
   exact (div_le_iff_le_mul (or.inl h0) (or.inl hinf)).2 h
 end
 
+lemma div_le_of_le_mul' (h : a ≤ b * c) : a / b ≤ c :=
+div_le_of_le_mul $ mul_comm b c ▸ h
+
 protected lemma div_lt_iff (h0 : b ≠ 0 ∨ c ≠ 0) (ht : b ≠ ∞ ∨ c ≠ ∞) :
   c / b < a ↔ c < a * b :=
 lt_iff_lt_of_le_iff_le $ le_div_iff_mul_le h0 ht
