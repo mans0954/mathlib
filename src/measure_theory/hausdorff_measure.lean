@@ -42,6 +42,57 @@ is additive on metric separated pairs of sets: `μ (s ∪ t) = μ s + μ t` prov
 metric outer measure, then prove that outer measures constructed using `mk_metric'` are metric outer
 measures.
 
+## Main definitions
+
+* `msaure_theory.outer_measure.is_metric`: an outer measure `μ` is called *metric* if
+  `μ (s ∪ t) = μ s + μ t` for any two metric separated sets `s` and `t`. A metric outer measure in a
+  Borel extended metric space is guaranteed to satisfy the Caratheodory condition, see
+  `measure_theory.outer_measure.is_metric.borel_le_caratheodory`.
+* `measure_theory.outer_measure.mk_metric'` and its particular case
+  `measure_theory.outer_measure.mk_metric`: a construction of an outer measure that is guaranteed to
+  be metric. Both constructions are generalizations of the Hausdorff measure. The same measures
+  interpreted as Borel measures are called `measure_theory.measure.mk_metric'` and
+  `measure_theory.measure.mk_metric`.
+* `measure_theory.measure.hausdorff_measure` a.k.a. `μH[d]`: the `d`-dimensional Hausdorff measure.
+  There are many definitions of the Hausdorff measure that differ from each other by a
+  multiplicative constant. We put
+  `μH[d] s = ⨆ r > 0, ⨅ (t : ℕ → set X) (hts : s ⊆ ⋃ n, t n) (ht : ∀ n, emetric.diam (t n) ≤ r),
+    ∑' n, ⨆ (ht : ¬set.subsingleton (t n)), (emetric.diam (t n)) ^ d`,
+  see `measure_theory.measure.hausdorff_measure_apply'`. In the most interesting case `0 < d` one
+  can omit the `⨆ (ht : ¬set.subsingleton (t n))` part.
+* `measure_theory.dimH`: the Hausdorff dimension of a set. For the Hausdorff dimension of the whole
+  space we use `measure_theory.dimH (set.univ : set X)`.
+
+## Main statements
+
+* `measure_theory.outer_measure.is_metric.borel_le_caratheodory`: if `μ` is a metric outer measure
+  on an extended metric space `X` (that is, it is additive on pairs of metric separated sets), then
+  every Borel set is Caratheodory measurable (hence, `μ` defines an actual
+  `measure_theory.measure`). See also `measure_theory.measure.mk_metric`.
+* `measure_theory.measure.hausdorff_measure_mono`: `μH[d] s` is a monotonically decreasing function
+  of `d`.
+* `measure_theory.measure.hausdorff_measure_zero_or_top`: if `d₁ < d₂`, then for any `s`, either
+  `μH[d₂] s = 0` or `μH[d₁] s = ∞`. Together with the previous lemma, this means that `μH[d] s` is
+  equal to infinity on some ray `(-∞, D)` and is equal to zero on `(D, +∞)`, where `D` is a possibly
+  infinite number called the *Hausdorff dimension* of `s`; `μH[D] s` can be zero, infinity, or
+  anything in between.
+* `measure_theory.measure.hausdorff_measure_of_lt_dimH`,
+  `measure_theory.measure.hausdorff_measure_of_dimH_lt`: if `d < dimH s`
+  (resp., `dimH s < d`), then `μH[d] s = ∞` (resp., `μH[d] s = 0`).
+* `measure_theory.measure.dimH_union`: the Hausdorff dimension of the union of two sets is the
+  maximum of their Hausdorff dimensions.
+* `measure_theory.measure.dimH_Union`, `measure_theory.measure.dimH_bUnion`,
+  `measure_theory.measure.dimH_sUnion`: the Hausdorff dimension of a countable union of sets is the
+  supremum of their Hausdorff dimensions.
+* `measure_theory.measure.no_atoms_hausdorff`, `measure_theory.measure.dimH_empty`,
+  `measure_theory.measure.dimH_singleton`, `set.subsingleton.dimH_eq`, `set.countable.dimH_eq`:
+  Hausdorff measure has no atoms and `dimH s = 0` whenever `s` is countable.
+* `holder_with.dimH_image_le` etc: if `f : X → Y` is Hölder continuous with exponent `r > 0`, then
+  for any `s`, `dimH (f '' s) ≤ dimH s / r`. We prove versions of this statement for `holder_with`,
+  `holder_on_with`, and locally Hölder maps, as well as for `set.image` and `set.range`.
+* `lipschitz_with.dimH_image_le` etc: Lipschitz continuous maps do not increase the Hausdorff
+  dimension of sets.
+
 ## Notations
 
 We use the following notation localized in `measure_theory`.
@@ -54,6 +105,10 @@ There are a few similar constructions called the `d`-dimensional Hausdorff measu
 sources only allow coverings by balls and use `r ^ d` instead of `(diam s) ^ d`. While these
 construction lead to different Hausdorff measures, they lead to the same notion of the Hausdorff
 dimension.
+
+Some sources define the `0`-dimensional Hausdorff measure to be the counting measure. We define it
+to be zero on subsingletons because this way we can have a
+`measure.has_no_atoms (measure.hausdorff_measure d)` instance.
 
 ## References
 
@@ -598,7 +653,16 @@ by rw [sUnion_eq_bUnion, dimH_bUnion hS]
 @[simp] lemma dimH_union (s t : set X) : dimH (s ∪ t) = max (dimH s) (dimH t) :=
 by rw [union_eq_Union, dimH_Union, supr_bool_eq, cond, cond, ennreal.sup_eq_max]
 
+lemma dimH_countable {s : set X} (hs : countable s) : dimH s = 0 :=
+bUnion_of_singleton s ▸ by simp only [dimH_bUnion hs, dimH_singleton, ennreal.supr_zero_eq_zero]
+
+alias dimH_countable ← set.countable.dimH_eq
+
 end measure_theory
+
+/-!
+### Hausdorff measure, Hausdorff dimension, and Hölder or Lipschitz continuous maps
+-/
 
 open_locale measure_theory
 open measure_theory measure_theory.measure
@@ -762,6 +826,22 @@ begin
   refine dimH_image_le_of_locally_lipschitz_on is_closed_univ (λ x _, _),
   simpa only [exists_prop, nhds_within_univ] using hf x
 end
+
+#check antilipschitz_with
+lemma antilipschitz_with.
+
+/-!
+### Isometries preserve the Hausdorff measure and Hausdorff dimension
+-/
+
+lemma isometry.hausdorff_measure_eq {f : X → Y} (hf : isometry f)
+
+/-!
+### Hausdorff dimension and `C¹`-smooth maps
+
+`C¹`-smooth maps are locally Lipschitz continuous, hence they do not increase the Hausdorff
+dimension of sets.
+-/
 
 variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space E] [borel_space E]
   [normed_group F] [normed_space ℝ F] [measurable_space F] [borel_space F]
