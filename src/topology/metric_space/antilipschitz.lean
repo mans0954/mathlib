@@ -67,6 +67,8 @@ namespace antilipschitz_with
 variables [pseudo_emetric_space α] [pseudo_emetric_space β] [pseudo_emetric_space γ]
 variables {K : ℝ≥0} {f : α → β}
 
+open emetric
+
 /-- Extract the constant from `hf : antilipschitz_with K f`. This is useful, e.g.,
 if `K` is given by a long formula, and we want to reuse this value. -/
 @[nolint unused_arguments] -- uses neither `f` nor `hf`
@@ -83,10 +85,11 @@ begin
   exact ennreal.div_le_of_le_mul' (hf x y)
 end
 
-lemma le_mul_ediam_image (hf : antilipschitz_with K f) (s : set α) :
-  emetric.diam s ≤ K * emetric.diam (f '' s) :=
-emetric.diam_le $ λ x hx y hy, (hf x y).trans $ mul_le_mul_left'
-  (emetric.edist_le_diam_of_mem (mem_image_of_mem f hx) (mem_image_of_mem f hy)) K
+lemma ediam_preimage_le (hf : antilipschitz_with K f) (s : set β) : diam (f ⁻¹' s) ≤ K * diam s :=
+diam_le $ λ x hx y hy, (hf x y).trans $ mul_le_mul_left' (edist_le_diam_of_mem hx hy) K
+
+lemma le_mul_ediam_image (hf : antilipschitz_with K f) (s : set α) : diam s ≤ K * diam (f '' s) :=
+(diam_mono (subset_preimage_image _ _)).trans (hf.ediam_preimage_le (f '' s))
 
 protected lemma id : antilipschitz_with 1 (id : α → α) :=
 λ x y, by simp only [ennreal.coe_one, one_mul, id, le_refl]
@@ -166,6 +169,11 @@ antilipschitz_with.id.restrict s
 
 lemma of_subsingleton [subsingleton α] {K : ℝ≥0} : antilipschitz_with K f :=
 λ x y, by simp only [subsingleton.elim x y, edist_self, zero_le]
+
+/-- If `f : α → β` is `0`-antilipschitz, then `α` is a `subsingleton`. -/
+protected lemma subsingleton {α β} [emetric_space α] [pseudo_emetric_space β] {f : α → β}
+  (h : antilipschitz_with 0 f) : subsingleton α :=
+⟨λ x y, edist_le_zero.1 $ (h x y).trans_eq $ zero_mul _⟩
 
 end antilipschitz_with
 

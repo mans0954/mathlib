@@ -313,6 +313,18 @@ by rw [← f.map_add_int, zero_add]
   f (fract x) - fract x = f x - x :=
 by conv_rhs { rw [← fract_add_floor x, f.map_add_int, add_sub_comm, sub_self, add_zero] }
 
+/-- Two `circle_deg1_lift` maps define the same self-map of the circle if they differ by an
+integer translation. -/
+def same_circle_map_setoid : con circle_deg1_lift :=
+{ r := λ f g, ∃ m : ℤ, ∀ x, f x = g x + m,
+  iseqv := ⟨λ f, ⟨0, λ x, (add_zero _).symm⟩,
+    λ f g ⟨m, hm⟩, ⟨-m, λ x, by simp [hm]⟩,
+    λ f g h ⟨m, hm⟩ ⟨n, hn⟩, ⟨n + m, λ x, by simp [*, add_assoc]⟩⟩,
+  mul' := λ f₁ f₂ g₁ g₂ ⟨m, hm⟩ ⟨n, hn⟩, ⟨n + m, λ x, by simp [*, add_assoc]⟩ }
+
+def same_circle_homeomorph_setoid : con (units circle_deg1_lift) :=
+same_circle_map_setoid.comap coe units.coe_mul
+
 /-!
 ### Pointwise order on circle maps
 -/
@@ -419,6 +431,33 @@ calc dist (g₁ 0) (g₂ 0) ≤ dist (g₁ 0) (f (g₁ 0) - f 0) + dist _ (g₂ 
 lemma dist_map_zero_lt_of_semiconj_by {f g₁ g₂ : circle_deg1_lift} (h : semiconj_by f g₁ g₂) :
   dist (g₁ 0) (g₂ 0) < 2 :=
 dist_map_zero_lt_of_semiconj $ semiconj_by_iff_semiconj.1 h
+
+noncomputable def euler_cocycle (f g : same_circle_map_setoid.quotient) : ℤ :=
+quotient.lift_on₂' f g (λ f g, ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋) $ λ f₁ f₂ g₁ g₂ ⟨m, hm⟩ ⟨n, hn⟩,
+  by { simp only [*, add_sub_add_right_eq_sub, floor_add_int, map_add_int], abel }
+
+lemma euler_cycycle_nonneg (f g : same_circle_map_setoid.quotient) :
+  0 ≤ euler_cocycle f g :=
+begin
+  rcases ⟨f, g⟩ with ⟨⟨f⟩, ⟨g⟩⟩,
+  change 0 ≤ ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋,
+  rw [sub_nonneg, le_sub_iff_add_le'],
+  exact f.le_floor_map_map_zero g
+end
+
+lemma euler_cocycle_le_one (f g : same_circle_map_setoid.quotient) :
+  euler_cocycle f g ≤ 1 :=
+begin
+  rcases ⟨f, g⟩ with ⟨⟨f⟩, ⟨g⟩⟩,
+  change ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋ ≤ 1,
+  
+end
+
+lemma euler_cocycle_mem_zero_one (f g : same_circle_map_setoid.quotient) :
+  euler_cocycle f g ∈ ({0, 1} : set ℤ) :=
+begin
+  have 
+end
 
 /-!
 ### Limits at infinities and continuity
@@ -802,6 +841,13 @@ begin
   rw [eq_div_iff, mul_comm, ← translation_number_pow]; [skip, exact ne_of_gt (nat.cast_pos.2 hn)],
   exact (f^n).translation_number_eq_int_iff (f.continuous_pow hf n)
 end
+
+lemma semiconj_of_group_action_of_forall_translation_number_eq
+  {G : Type*} [group G] (f₁ f₂ : G → units (circle_deg1_lift)) (n₁ n₂ : G → G → ℤ)
+  (Hmul₁ : ∀ g₁ g₂ x, f₁ (g₁ * g₂) x = f₁ g₁ (f₁ g₂ x) + n₁ g₁ g₂)
+  (Hmul₂ : ∀ g₁ g₂ x, f₂ (g₁ * g₂) x = f₂ g₁ (f₂ g₂ x) + n₁ g₁ g₂)
+  (h : ∀ g, τ (f₁ g) = τ (f₂ g)) :
+  ∃ F : circle_deg1_lift, ∀ g, semiconj F (f₁ g) (f₂ g) :=
 
 /-- Consider two actions `f₁ f₂ : G →* circle_deg1_lift` of a group on the real line by lifts of
 orientation preserving circle homeomorphisms. Suppose that for each `g : G` the homeomorphisms
