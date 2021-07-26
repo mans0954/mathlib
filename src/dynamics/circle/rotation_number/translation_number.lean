@@ -450,13 +450,13 @@ lemma euler_cocycle_le_one (f g : same_circle_map_setoid.quotient) :
 begin
   rcases ⟨f, g⟩ with ⟨⟨f⟩, ⟨g⟩⟩,
   change ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋ ≤ 1,
-  
+  sorry,
 end
 
 lemma euler_cocycle_mem_zero_one (f g : same_circle_map_setoid.quotient) :
   euler_cocycle f g ∈ ({0, 1} : set ℤ) :=
 begin
-  have 
+  sorry
 end
 
 /-!
@@ -848,6 +848,7 @@ lemma semiconj_of_group_action_of_forall_translation_number_eq
   (Hmul₂ : ∀ g₁ g₂ x, f₂ (g₁ * g₂) x = f₂ g₁ (f₂ g₂ x) + n₁ g₁ g₂)
   (h : ∀ g, τ (f₁ g) = τ (f₂ g)) :
   ∃ F : circle_deg1_lift, ∀ g, semiconj F (f₁ g) (f₂ g) :=
+sorry
 
 /-- Consider two actions `f₁ f₂ : G →* circle_deg1_lift` of a group on the real line by lifts of
 orientation preserving circle homeomorphisms. Suppose that for each `g : G` the homeomorphisms
@@ -856,7 +857,7 @@ orientation preserving circle homeomorphisms. Suppose that for each `g : G` the 
 
 This is a version of Proposition 5.4 from [Étienne Ghys, Groupes d'homeomorphismes du cercle et
 cohomologie bornee][ghys87:groupes]. -/
-lemma semiconj_of_group_action_of_forall_translation_number_eq
+lemma semiconj_of_group_action_of_forall_translation_number_eq'
   {G : Type*} [group G] (f₁ f₂ : G →* circle_deg1_lift)
   (h : ∀ g, τ (f₁ g) = τ (f₂ g)) :
   ∃ F : circle_deg1_lift, ∀ g, semiconj F (f₁ g) (f₂ g) :=
@@ -904,7 +905,7 @@ begin
   have : ∀ n : multiplicative ℤ, τ ((units.coe_hom _).comp (gpowers_hom _ f₁) n) =
     τ ((units.coe_hom _).comp (gpowers_hom _ f₂) n),
   { intro n, simp [h] },
-  exact (semiconj_of_group_action_of_forall_translation_number_eq _ _ this).imp
+  exact (semiconj_of_group_action_of_forall_translation_number_eq' _ _ this).imp
     (λ F hF, hF (multiplicative.of_add 1))
 end
 
