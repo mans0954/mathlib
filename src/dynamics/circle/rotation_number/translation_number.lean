@@ -911,12 +911,13 @@ begin
   exact (f^n).translation_number_eq_int_iff (f.continuous_pow hf n)
 end
 
-lemma semiconj_of_group_action_of_forall_translation_number_eq
+lemma semiconj_of_group_action_of_forall_translation_number_eq'
   {G : Type*} [group G] (f₁ f₂ : G → units (circle_deg1_lift)) (n₁ n₂ : G → G → ℤ)
   (Hmul₁ : ∀ g₁ g₂ x, f₁ (g₁ * g₂) x = f₁ g₁ (f₁ g₂ x) + n₁ g₁ g₂)
   (Hmul₂ : ∀ g₁ g₂ x, f₂ (g₁ * g₂) x = f₂ g₁ (f₂ g₂ x) + n₁ g₁ g₂)
   (h : ∀ g, τ (f₁ g) = τ (f₂ g)) :
   ∃ F : circle_deg1_lift, ∀ g, semiconj F (f₁ g) (f₂ g) :=
+sorry
 
 /-- Consider two actions `f₁ f₂ : G →* circle_deg1_lift` of a group on the real line by lifts of
 orientation preserving circle homeomorphisms. Suppose that for each `g : G` the homeomorphisms

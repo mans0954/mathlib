@@ -562,6 +562,50 @@ begin
   { refl }
 end
 
+/-- To bound the Hausdorff measure of a set, one may use coverings with maximum diameter tending
+to `0`, indexed by any sequence of encodable types. -/
+lemma hausdorff_measure_le {β : Type*}  {ι : β → Type*} [hι : ∀ n, encodable (ι n)]
+  {d : ℝ} (hd : 0 < d) (s : set X)
+  {l : filter β} (r : β → ℝ≥0∞) (hr : tendsto r l (𝓝 0)) (t : Π (n : β), ι n → set X)
+  (ht : ∀ n i, diam (t n i) ≤ r n) (hst : ∀ n, s ⊆ ⋃ i, t n i) :
+  μH[d] s ≤ liminf l (λ n, ∑' i, diam (t n i) ^ d) :=
+begin
+  classical,
+  rw hausdorff_measure_apply hd,
+  refine le_of_forall_le_of_dense (λ c hc, _),
+  refine supr_le (λ i, supr_le (λ hi, _)),
+  rcases ((frequently_lt_of_liminf_lt (by is_bounded_default) hc).and_eventually
+    ((tendsto_order.1 hr).2 _ hi)).exists with ⟨n, hn, hrn⟩,
+  let u : ℕ → set X := λ j, option.elim (decode₂ (ι n) j) ∅ (t n),
+  refine (infi_le _ u).trans _,
+  have : s ⊆ ⋃ j, u j,
+  { assume x hx,
+    rcases mem_Union.1 (hst n hx) with ⟨w, hw⟩,
+    apply mem_Union.2 ⟨encode w, _⟩,
+    simp only [u],
+    rw encodek₂ w,
+    simpa },
+  refine (infi_le _ this).trans _,
+  have : ∀ (j : ℕ), diam (u j) ≤ i,
+  { assume j,
+    apply le_trans _ hrn.le,
+    simp only [u],
+    generalize : decode₂ (ι n) j = e,
+    cases e,
+    { simp },
+    { simp [ht n e] } },
+  refine (infi_le _ this).trans _,
+  have A : ∀ (j : ℕ), j ∉ range (encode : ι n → ℕ) → diam (u j) ^ d = 0,
+  { assume j hj,
+    have : decode₂ (ι n) j = none, by simpa [← decode₂_ne_none_iff] using hj,
+    simp [u, this, hd] },
+  have B : has_sum ((λ (j : ℕ), diam (u j) ^ d) ∘ (encode : ι n → ℕ)) (∑' i, diam (t n i) ^ d),
+    by simp only [u, comp, encodek₂, ennreal.summable.has_sum, option.elim],
+  rw function.injective.has_sum_iff encode_injective A at B,
+  rw [B.tsum_eq],
+  exact hn.le
+end
+
 /-- If `d₁ < d₂`, then for any set `s` we have either `μH[d₂] s = 0`, or `μH[d₁] s = ∞`. -/
 lemma hausdorff_measure_zero_or_top {d₁ d₂ : ℝ} (h : d₁ < d₂) (s : set X) :
   μH[d₂] s = 0 ∨ μH[d₁] s = ∞ :=
