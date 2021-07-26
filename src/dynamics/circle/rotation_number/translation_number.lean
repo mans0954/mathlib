@@ -297,6 +297,9 @@ f.commute_add_int m x
 @[simp] lemma map_sub_int (x : ℝ) (n : ℤ) : f (x - n) = f x - n :=
 f.commute_sub_int n x
 
+@[simp] lemma map_sub_one (x : ℝ) : f (x - 1) = f x - 1 :=
+by exact_mod_cast f.map_sub_int x 1
+
 @[simp] lemma map_add_nat (x : ℝ) (n : ℕ) : f (x + n) = f x + n :=
 f.map_add_int x n
 
@@ -348,7 +351,16 @@ noncomputable instance : lattice circle_deg1_lift :=
     map_add_one' := λ x, by simp [min_add_add_right] },
   inf_le_left := λ f g x, min_le_left (f x) (g x),
   inf_le_right := λ f g x, min_le_right (f x) (g x),
-  le_inf := λ f₁ f₂ f₃ h₂ h₃ x, le_min (h₂ x) (h₃ x) }
+  le_inf := λ f₁ f₂ f₃ h₂ h₃ x, le_min (h₂ x) (h₃ x),
+  -- Sup := λ s,
+  -- { to_fun := λ x, (⨆ f : s, f x - x) + x,
+  --   monotone' := λ x y h,
+  --     begin
+  --       by_cases hs : bdd_above (range $ λ f : s, f x - x),
+  --       {  }
+  --     end,
+  --   map_add_one' := _ }
+}
 
 @[simp] lemma sup_apply (x : ℝ) : (f ⊔ g) x = max (f x) (g x) := rfl
 
@@ -436,7 +448,7 @@ noncomputable def euler_cocycle (f g : same_circle_map_setoid.quotient) : ℤ :=
 quotient.lift_on₂' f g (λ f g, ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋) $ λ f₁ f₂ g₁ g₂ ⟨m, hm⟩ ⟨n, hn⟩,
   by { simp only [*, add_sub_add_right_eq_sub, floor_add_int, map_add_int], abel }
 
-lemma euler_cycycle_nonneg (f g : same_circle_map_setoid.quotient) :
+lemma euler_cocycle_nonneg (f g : same_circle_map_setoid.quotient) :
   0 ≤ euler_cocycle f g :=
 begin
   rcases ⟨f, g⟩ with ⟨⟨f⟩, ⟨g⟩⟩,
@@ -450,14 +462,15 @@ lemma euler_cocycle_le_one (f g : same_circle_map_setoid.quotient) :
 begin
   rcases ⟨f, g⟩ with ⟨⟨f⟩, ⟨g⟩⟩,
   change ⌊f (g 0)⌋ - ⌊f 0⌋ - ⌊g 0⌋ ≤ 1,
-  sorry,
+  rw [sub_le_iff_le_add', sub_le_iff_le_add'],
+  refine (f.floor_map_map_zero_le g).trans (add_le_add_left _ _),
+  exact ceil_le_floor_add_one (g 0)
 end
 
 lemma euler_cocycle_mem_zero_one (f g : same_circle_map_setoid.quotient) :
   euler_cocycle f g ∈ ({0, 1} : set ℤ) :=
-begin
-  sorry
-end
+(euler_cocycle_nonneg f g).eq_or_lt.imp eq.symm $
+  le_antisymm (euler_cocycle_le_one f g)
 
 /-!
 ### Limits at infinities and continuity
@@ -474,6 +487,62 @@ tendsto_at_top_mono f.le_map_of_map_zero $ tendsto_at_top_add_const_left _ _ $
 
 lemma continuous_iff_surjective : continuous f ↔ function.surjective f :=
 ⟨λ h, h.surjective f.tendsto_at_top f.tendsto_at_bot, f.monotone.continuous_of_surjective⟩
+
+lemma bdd_above_set_of_map_le (f : circle_deg1_lift) (y : ℝ) :
+  bdd_above {x | f x ≤ y} :=
+let ⟨z, hz⟩ := eventually_at_top.1 (f.tendsto_at_top.eventually (eventually_gt_at_top y)) in
+⟨z, λ x (hxy : f x ≤ y), le_of_not_lt $ λ hzx, hxy.not_lt (hz _ hzx.le)⟩
+
+lemma bdd_below_set_of_le_map (f : circle_deg1_lift) (y : ℝ) :
+  bdd_below {x | y ≤ f x} :=
+let ⟨z, hz⟩ := eventually_at_bot.1 (f.tendsto_at_bot.eventually (eventually_lt_at_bot y)) in
+⟨z, λ x (hxy : y ≤ f x), le_of_not_lt $ λ hzx, hxy.not_lt (hz _ hzx.le)⟩
+
+lemma exists_map_le (f : circle_deg1_lift) (y : ℝ) : ∃ x, f x ≤ y :=
+(f.tendsto_at_bot.eventually (eventually_le_at_bot y)).exists
+
+lemma nonempty_set_of_map_le (f : circle_deg1_lift) (y : ℝ) :
+  {x | f x ≤ y}.nonempty :=
+f.exists_map_le y
+
+lemma exists_le_map (f : circle_deg1_lift) (y : ℝ) : ∃ x, y ≤ f x :=
+(f.tendsto_at_top.eventually (eventually_ge_at_top y)).exists
+
+noncomputable instance : has_inv circle_deg1_lift :=
+⟨λ f,
+  { to_fun := λ y, Sup {x | f x ≤ y},
+    monotone' := λ x y h, cSup_le_cSup (f.bdd_above_set_of_map_le y) (f.exists_map_le x) $
+      λ a (ha : f a ≤ x), ha.trans h,
+    map_add_one' := λ y,
+      begin
+        refine eq.trans _ ((order_iso.add_right (1 : ℝ)).left_ord_continuous.map_cSup
+          (f.nonempty_set_of_map_le y) (f.bdd_above_set_of_map_le y)).symm,
+        erw [equiv.image_eq_preimage], congr' with x,
+        simp [← sub_eq_add_neg, sub_le_iff_le_add]
+      end }⟩
+
+lemma semiconj_by_inv_symm {h : circle_deg1_lift} {f g : units circle_deg1_lift}
+  (H : semiconj_by h f g) : semiconj_by h⁻¹ g f :=
+have semiconj h (to_order_iso f) (to_order_iso g).to_order_embedding,
+  from semiconj_by_iff_semiconj.1 H,
+semiconj_by_iff_semiconj.2 $ this.symm_adjoint $
+  is_order_right_adjoint_cSup _ h.exists_map_le h.bdd_above_set_of_map_le
+  
+def semiconj_lift_setoid : setoid (units circle_deg1_lift) :=
+{ r := λ f g, ∃ h : circle_deg1_lift, semiconj_by h f g,
+  iseqv := ⟨λ f, ⟨1, semiconj_by.one_left f⟩,
+    λ f g ⟨h, H⟩, ⟨h⁻¹, semiconj_by_inv_symm H⟩,
+    λ f₁ f₂ f₃ ⟨h₁, H₁⟩ ⟨h₂, H₂⟩, ⟨_, H₂.mul_left H₁⟩⟩ }
+
+def semiconj_setoid : setoid same_circle_homeomorph_setoid.quotient :=
+same_circle_homeomorph_setoid.to_setoid.correspondence
+  { val :=
+    { r := λ f g, ∃ (n : ℤ) (h : circle_deg1_lift),
+        semiconj_by h f (translate (multiplicative.of_add (n : ℝ)) * g),
+      iseqv := ⟨λ f, ⟨0, 1, by simp⟩, λ f g ⟨n, h, H⟩, ⟨-n, h⁻¹, _⟩, _⟩ },
+    property := _ }
+-- { r := λ f g, ∃ f' g', quotient.mk' f' = f ∧ quotient.mk' g' = g ∧ semiconj_lift_setoid.rel f' g',
+--   iseqv := _ }
 
 /-!
 ### Estimates on `(f^n) x`
@@ -842,7 +911,7 @@ begin
   exact (f^n).translation_number_eq_int_iff (f.continuous_pow hf n)
 end
 
-lemma semiconj_of_group_action_of_forall_translation_number_eq
+lemma semiconj_of_group_action_of_forall_translation_number_eq'
   {G : Type*} [group G] (f₁ f₂ : G → units (circle_deg1_lift)) (n₁ n₂ : G → G → ℤ)
   (Hmul₁ : ∀ g₁ g₂ x, f₁ (g₁ * g₂) x = f₁ g₁ (f₁ g₂ x) + n₁ g₁ g₂)
   (Hmul₂ : ∀ g₁ g₂ x, f₂ (g₁ * g₂) x = f₂ g₁ (f₂ g₂ x) + n₁ g₁ g₂)
@@ -857,7 +926,7 @@ orientation preserving circle homeomorphisms. Suppose that for each `g : G` the 
 
 This is a version of Proposition 5.4 from [Étienne Ghys, Groupes d'homeomorphismes du cercle et
 cohomologie bornee][ghys87:groupes]. -/
-lemma semiconj_of_group_action_of_forall_translation_number_eq'
+lemma semiconj_of_group_action_of_forall_translation_number_eq
   {G : Type*} [group G] (f₁ f₂ : G →* circle_deg1_lift)
   (h : ∀ g, τ (f₁ g) = τ (f₂ g)) :
   ∃ F : circle_deg1_lift, ∀ g, semiconj F (f₁ g) (f₂ g) :=
@@ -905,7 +974,7 @@ begin
   have : ∀ n : multiplicative ℤ, τ ((units.coe_hom _).comp (gpowers_hom _ f₁) n) =
     τ ((units.coe_hom _).comp (gpowers_hom _ f₂) n),
   { intro n, simp [h] },
-  exact (semiconj_of_group_action_of_forall_translation_number_eq' _ _ this).imp
+  exact (semiconj_of_group_action_of_forall_translation_number_eq _ _ this).imp
     (λ F hF, hF (multiplicative.of_add 1))
 end
 
