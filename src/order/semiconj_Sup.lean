@@ -44,7 +44,7 @@ lemma is_order_right_adjoint_Sup [complete_lattice α] [preorder β] (f : α →
 λ y, is_lub_Sup _
 
 lemma is_order_right_adjoint_cSup [conditionally_complete_lattice α] [preorder β] (f : α → β)
-  (hne : ∀ y, ∃ x, f x ≤ y) (hbdd : ∀ y, ∃ b, ∀ x, f x ≤ y → x ≤ b) :
+  (hne : ∀ y, ∃ x, f x ≤ y) (hbdd : ∀ y, bdd_above {x | f x ≤ y}) :
   is_order_right_adjoint f (λ y, Sup {x | f x ≤ y}) :=
 λ y, is_lub_cSup (hne y) (hbdd y)
 
