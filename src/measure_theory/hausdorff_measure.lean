@@ -121,7 +121,7 @@ Hausdorff measure, Hausdorff dimension, dimension, measure, metric measure
 
 open_locale nnreal ennreal topological_space big_operators
 
-open emetric set function filter
+open emetric set function filter encodable
 
 noncomputable theory
 
@@ -567,7 +567,7 @@ to `0`, indexed by any sequence of encodable types. -/
 lemma hausdorff_measure_le {β : Type*}  {ι : β → Type*} [hι : ∀ n, encodable (ι n)]
   {d : ℝ} (hd : 0 < d) (s : set X)
   {l : filter β} (r : β → ℝ≥0∞) (hr : tendsto r l (𝓝 0)) (t : Π (n : β), ι n → set X)
-  (ht : ∀ n i, diam (t n i) ≤ r n) (hst : ∀ n, s ⊆ ⋃ i, t n i) :
+  (ht : ∀ᶠ n in l, ∀ i, diam (t n i) ≤ r n) (hst : ∀ᶠ n in l, s ⊆ ⋃ i, t n i) :
   μH[d] s ≤ liminf l (λ n, ∑' i, diam (t n i) ^ d) :=
 begin
   classical,
@@ -575,12 +575,12 @@ begin
   refine le_of_forall_le_of_dense (λ c hc, _),
   refine supr_le (λ i, supr_le (λ hi, _)),
   rcases ((frequently_lt_of_liminf_lt (by is_bounded_default) hc).and_eventually
-    ((tendsto_order.1 hr).2 _ hi)).exists with ⟨n, hn, hrn⟩,
+    ((((tendsto_order.1 hr).2 _ hi)).and (ht.and hst))).exists with ⟨n, hn, hrn, htn, hstn⟩,
   let u : ℕ → set X := λ j, option.elim (decode₂ (ι n) j) ∅ (t n),
   refine (infi_le _ u).trans _,
   have : s ⊆ ⋃ j, u j,
   { assume x hx,
-    rcases mem_Union.1 (hst n hx) with ⟨w, hw⟩,
+    rcases mem_Union.1 (hstn hx) with ⟨w, hw⟩,
     apply mem_Union.2 ⟨encode w, _⟩,
     simp only [u],
     rw encodek₂ w,
@@ -593,7 +593,7 @@ begin
     generalize : decode₂ (ι n) j = e,
     cases e,
     { simp },
-    { simp [ht n e] } },
+    { simp [htn e] } },
   refine (infi_le _ this).trans _,
   have A : ∀ (j : ℕ), j ∉ range (encode : ι n → ℕ) → diam (u j) ^ d = 0,
   { assume j hj,
@@ -1015,6 +1015,7 @@ variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space 
 lemma hausdorff_measure_pi_real {ι : Type*} [fintype ι] [nonempty ι] :
   (μH[fintype.card ι] : measure (ι → ℝ)) = volume :=
 begin
+  classical,
   have Hle : volume ≤ (μH[fintype.card ι] : measure (ι → ℝ)),
   { refine le_hausdorff_measure _ _ ∞ ennreal.coe_lt_top (λ s h₁ h₂, _),
     rw [ennreal.rpow_nat_cast],
@@ -1026,9 +1027,49 @@ begin
   obtain rfl : s = λ i, Ioo (a i) (b i), from funext (λ i, (H i).2), replace H := λ i, (H i).1,
   apply le_antisymm,
   { have Hpos : 0 < (fintype.card ι : ℝ), by simp [fintype.card_pos_iff.2 ‹nonempty ι›],
-    simp only [real.volume_Ioo, hausdorff_measure_apply Hpos],
-    refine bsupr_le (λ ε ε0, _),
-    sorry },
+    let γ := λ (n : ℕ), (Π (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n))),
+    haveI : ∀ n, encodable (γ n) :=
+      λ n, (fintype_pi ι (λ (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n)))).out,
+    let t : Π (n : ℕ), γ n → set (ι → ℝ) :=
+      λ n f, set.pi univ (λ i, Ioo (a i + f i /n) (a i+ (f i + 1)/n)),
+    have A : tendsto (λ (n : ℕ), 1/(n : ℝ≥0∞)) at_top (𝓝 0) := sorry,
+    have B : ∀ᶠ n in at_top, ∀ (i : γ n), diam (t n i) ≤ 1 / n := sorry,
+    have C : ∀ᶠ n in at_top, set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)) ⊆ ⋃ (i : γ n), t n i := sorry,
+    calc μH[fintype.card ι] (set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)))
+      ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), diam (t n i) ^ ↑(fintype.card ι)) :
+        hausdorff_measure_le Hpos (set.pi univ (λ i, Ioo (a i : ℝ) (b i)))
+          (λ (n : ℕ), 1/(n : ℝ≥0∞)) A t B C
+    ... ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), (1/n) ^ (fintype.card ι)) :
+      begin
+        refine liminf_le_liminf _ (by is_bounded_default),
+        filter_upwards [B],
+        assume n hn,
+        apply ennreal.tsum_le_tsum (λ i, _),
+        simp only [← ennreal.rpow_nat_cast],
+        exact ennreal.rpow_le_rpow (hn i) Hpos.le,
+      end
+    ... = liminf at_top (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ≥0∞) / n) :
+    begin
+      congr' 1,
+      ext1 n,
+      simp only [tsum_fintype, finset.card_univ, nat.cast_prod, one_div, fintype.card_fin,
+        finset.sum_const, nsmul_eq_mul, fintype.card_pi],
+      simp_rw [← finset.card_univ, ← finset.prod_const, ← finset.prod_mul_distrib],
+      refl,
+    end
+    -- ... = ∏ (i : ι), ((b i : ℝ≥0∞) - a i) : sorry
+    ... = ∏ (i : ι), volume (Ioo (a i : ℝ) (b i)) : begin
+       simp only [real.volume_Ioo],
+       apply tendsto.liminf_eq,
+       have : tendsto (λ (n : ℕ), ∏ (i : ι), ((nat_ceil ((b i : ℝ) - a i) : ℝ) * n) / n) at_top
+         (𝓝 (∏ (i : ι), ((b i : ℝ) - a i))),
+       { refine tendsto_finset_prod _ (λ i hi, _),
+         sorry,
+
+       },
+       sorry
+
+    end },
   { rw [← volume_pi_pi (λ i, Ioo (a i : ℝ) (b i)) (λ i, measurable_set_Ioo)],
     exact measure.le_iff'.1 Hle _ }
 end
