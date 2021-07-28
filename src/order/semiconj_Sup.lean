@@ -68,7 +68,7 @@ lemma order_iso_comp [preorder α] [preorder β] [preorder γ] {f : α → β} {
 lemma comp_order_iso [preorder α] [preorder β] [preorder γ] {f : α → β} {g : β → α}
   (h : is_order_right_adjoint f g) (e : γ ≃o α) :
   is_order_right_adjoint (f ∘ e) (e.symm ∘ g) :=
-begin                    
+begin
   intro y,
   change is_lub (e ⁻¹' {x | f x ≤ y}) (e.symm (g y)),
   rw [e.is_lub_preimage, e.apply_symm_apply],
