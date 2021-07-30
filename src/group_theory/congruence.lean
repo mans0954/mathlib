@@ -510,11 +510,6 @@ def comap (f : M → N) (H : ∀ x y, f (x * y) = f x * f y) (c : con N) : con M
 { mul' := λ w x y z h1 h2, show c (f (w * y)) (f (x * z)), by rw [H, H]; exact c.mul h1 h2,
   ..c.to_setoid.comap f }
 
-@[simp, to_additive] lemma comap_rel {f : M → N} (H : ∀ x y, f (x * y) = f x * f y)
-  {c : con N} {x y : M} :
-  comap f H c x y ↔ c (f x) (f y) :=
-iff.rfl
-
 section
 open quotient
 
@@ -611,7 +606,7 @@ lemma le_iff {c d : con M} : c ≤ d ↔ (c : submonoid (M × M)) ≤ d :=
 def ker (f : M →* P) : con M := mul_ker f f.3
 
 /-- The definition of the congruence relation defined by a monoid homomorphism's kernel. -/
-@[simp, to_additive "The definition of the additive congruence relation defined by an `add_monoid`
+@[to_additive "The definition of the additive congruence relation defined by an `add_monoid`
 homomorphism's kernel."]
 lemma ker_rel (f : M →* P) {x y} : ker f x y ↔ f x = f y := iff.rfl
 
@@ -642,9 +637,10 @@ variables {c}
 @[to_additive "The natural homomorphism from an `add_monoid` to its quotient by a congruence
 relation is surjective."]
 lemma mk'_surjective : surjective c.mk' :=
-quotient.surjective_quotient_mk'
+λ x, by rcases x; exact ⟨x, rfl⟩
 
-@[simp, to_additive] lemma coe_mk' : (c.mk' : M → c.quotient) = coe := rfl
+@[simp, to_additive] lemma comp_mk'_apply (g : c.quotient →* P) {x} :
+  g.comp c.mk' x = g x := rfl
 
 /-- The elements related to `x ∈ M`, `M` a monoid, by the kernel of a monoid homomorphism are
     those in the preimage of `f(x)` under `f`. -/
@@ -720,7 +716,7 @@ end
 @[to_additive "The uniqueness part of the universal property for quotients of `add_monoid`s."]
 theorem lift_unique (H : c ≤ ker f) (g : c.quotient →* P)
   (Hg : g.comp c.mk' = f) : g = c.lift f H :=
-lift_funext g (c.lift f H) $ λ x, by { subst f, refl }
+lift_funext g (c.lift f H) $ λ x, by rw [lift_coe H, ←comp_mk'_apply, Hg]
 
 /-- Given a congruence relation `c` on a monoid and a homomorphism `f` constant on `c`'s
     equivalence classes, `f` has the same image as the homomorphism that `f` induces on the
