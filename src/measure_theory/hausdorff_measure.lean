@@ -1009,6 +1009,7 @@ end isometric
 dimension of sets.
 -/
 
+
 variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space E] [borel_space E]
   [normed_group F] [normed_space ℝ F] [measurable_space F] [borel_space F]
 
@@ -1023,7 +1024,9 @@ begin
   refine (pi_eq_generate_from (λ i, real.borel_eq_generate_from_Ioo_rat.symm)
     (λ i, real.is_pi_system_Ioo_rat) (λ i, real.finite_spanning_sets_in_Ioo_rat _)
     _).symm,
-  simp only [mem_Union, mem_singleton_iff], intros s hs, choose a b H using hs,
+  simp only [mem_Union, mem_singleton_iff],
+  intros s hs,
+  choose a b H using hs,
   obtain rfl : s = λ i, Ioo (a i) (b i), from funext (λ i, (H i).2), replace H := λ i, (H i).1,
   apply le_antisymm,
   { have Hpos : 0 < (fintype.card ι : ℝ), by simp [fintype.card_pos_iff.2 ‹nonempty ι›],
@@ -1057,17 +1060,16 @@ begin
       simp_rw [← finset.card_univ, ← finset.prod_const, ← finset.prod_mul_distrib],
       refl,
     end
-    -- ... = ∏ (i : ι), ((b i : ℝ≥0∞) - a i) : sorry
-    ... = ∏ (i : ι), volume (Ioo (a i : ℝ) (b i)) : begin
-       simp only [real.volume_Ioo],
-       apply tendsto.liminf_eq,
-       have : tendsto (λ (n : ℕ), ∏ (i : ι), ((nat_ceil ((b i : ℝ) - a i) : ℝ) * n) / n) at_top
-         (𝓝 (∏ (i : ι), ((b i : ℝ) - a i))),
-       { refine tendsto_finset_prod _ (λ i hi, _),
-         sorry,
-
-       },
-       sorry
+    ... = ∏ (i : ι), volume (Ioo (a i : ℝ) (b i)) :
+    begin
+      simp only [real.volume_Ioo],
+      apply tendsto.liminf_eq,
+      have : tendsto (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ) / n) at_top
+        (𝓝 (∏ (i : ι), ((b i : ℝ) - a i))),
+      { refine tendsto_finset_prod _ (λ i hi, _),
+        have I : 0 ≤ (b i : ℝ) - a i, by simpa only [sub_nonneg, rat.cast_le] using (H i).le,
+        exact (tendsto_nat_ceil_mul_div_at_top I).comp tendsto_coe_nat_at_top_at_top },
+      sorry
 
     end },
   { rw [← volume_pi_pi (λ i, Ioo (a i : ℝ) (b i)) (λ i, measurable_set_Ioo)],
