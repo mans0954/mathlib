@@ -59,6 +59,8 @@ end
 
 -- REVIEWERS: I'm also not in love with the naming - any suggestions welcome.
 
+/-- Given `P 0, P 1` and a way to extend `P a` to `P (p ^ k * a)`,
+you can define `P` for all natural numbers. -/
 @[elab_as_eliminator]
 def rec_on_prime_pow {P : ℕ → Sort*} (h0 : P 0) (h1 : P 1)
   (h : ∀ a p n : ℕ, p.prime → ¬ p ∣ a → P a → P (p ^ n * a)) : ∀ (a : ℕ), P a :=
@@ -84,12 +86,16 @@ def rec_on_prime_pow {P : ℕ → Sort*} (h0 : P 0) (h1 : P 1)
     end
   end
 
+/-- Given `P 0`, `P (p ^ k)` for all prime powers, and a way to extend `P a` and `P b` to
+`P (a * b)` when `a, b` are coprime, you can define `P` for all natural numbers. -/
 @[elab_as_eliminator]
 def rec_on_coprime {P : ℕ → Sort*} (h0 : P 0) (hp : ∀ p n : ℕ, prime p → P (p ^ n))
   (h : ∀ a b, coprime a b → P a → P b → P (a * b)) : ∀ a, P a :=
 rec_on_prime_pow h0 (hp 2 0 prime_two) $ λ a p n hp' hpa ha,
   h (p ^ n) a ((prime.coprime_pow_of_not_dvd hp' hpa).symm) (hp p n hp') ha
 
+/-- Given `P 0`, `P 1`, `P p` for all primes, and a proof that you can extend
+`P a` and `P b` to `P (a * b)`, you can define `P` for all natural numbers. -/
 @[elab_as_eliminator]
 def rec_on_completely_multiplicative {P : ℕ → Sort*} (h0 : P 0) (h1 : P 1)
   (hp : ∀ p, prime p → P p) (h : ∀ a b, P a → P b → P (a * b)) : ∀ a, P a :=
