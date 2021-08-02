@@ -376,6 +376,12 @@ lemma add_eq_coe [has_add α] : ∀ {a b : with_top α} {c : α},
 | (some a) (some b) c :=
     by simp only [some_eq_coe, ← coe_add, coe_eq_coe, exists_and_distrib_left, exists_eq_left]
 
+@[simp] lemma add_coe_eq_top_iff [has_add α] {x : with_top α} {y : α} : x + y = ⊤ ↔ x = ⊤ :=
+by { induction x using with_top.rec_top_coe; simp [← coe_add, -with_zero.coe_add] }
+
+@[simp] lemma coe_add_eq_top_iff [has_add α] {x : α} {y : with_top α} : ↑x + y = ⊤ ↔ y = ⊤ :=
+by { induction y using with_top.rec_top_coe; simp [← coe_add, -with_zero.coe_add] }
+
 instance [add_comm_semigroup α] : add_comm_semigroup (with_top α) :=
 { ..@additive.add_comm_semigroup _ $
     @with_zero.comm_semigroup (multiplicative α) _ }
