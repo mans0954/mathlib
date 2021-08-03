@@ -8,6 +8,7 @@ import algebra.big_operators.ring
 import data.real.basic
 import algebra.indicator_function
 import algebra.algebra.basic
+import algebra.nonneg
 
 /-!
 # Nonnegative real numbers
@@ -44,10 +45,15 @@ This file defines `ℝ≥0` as a localized notation for `nnreal`.
 
 noncomputable theory
 
+open set
 open_locale classical big_operators
 
 /-- Nonnegative real numbers. -/
-def nnreal := {r : ℝ // 0 ≤ r}
+@[derive [semilattice_inf_bot, densely_ordered,
+  linear_ordered_add_comm_monoid, linear_ordered_semiring, ordered_comm_semiring,
+  canonically_linear_ordered_add_monoid, canonically_ordered_comm_semiring,
+  has_sub, has_ordered_sub, has_inv, has_div]]
+def nnreal : Type := set.Ici (0 : ℝ)
 localized "notation ` ℝ≥0 ` := nnreal" in nnreal
 
 namespace nnreal
@@ -71,7 +77,7 @@ lemma ne_iff {x y : ℝ≥0} : (x : ℝ) ≠ (y : ℝ) ↔ x ≠ y :=
 not_iff_not_of_iff $ nnreal.eq_iff
 
 /-- Reinterpret a real number `r` as a non-negative real number. Returns `0` if `r < 0`. -/
-def _root_.real.to_nnreal (r : ℝ) : ℝ≥0 := ⟨max r 0, le_max_right _ _⟩
+def _root_.real.to_nnreal (r : ℝ) : ℝ≥0 := ⟨max r 0, mem_Ici.mpr $ le_max_right _ _⟩
 
 lemma _root_.real.coe_to_nnreal (r : ℝ) (hr : 0 ≤ r) : (real.to_nnreal r : ℝ) = r :=
 max_eq_left hr
@@ -83,15 +89,15 @@ lemma coe_nonneg (r : ℝ≥0) : (0 : ℝ) ≤ r := r.2
 @[norm_cast]
 theorem coe_mk (a : ℝ) (ha) : ((⟨a, ha⟩ : ℝ≥0) : ℝ) = a := rfl
 
-instance : has_zero ℝ≥0  := ⟨⟨0, le_refl 0⟩⟩
-instance : has_one ℝ≥0   := ⟨⟨1, zero_le_one⟩⟩
-instance : has_add ℝ≥0   := ⟨λa b, ⟨a + b, add_nonneg a.2 b.2⟩⟩
-instance : has_sub ℝ≥0   := ⟨λa b, real.to_nnreal (a - b)⟩
-instance : has_mul ℝ≥0   := ⟨λa b, ⟨a * b, mul_nonneg a.2 b.2⟩⟩
-instance : has_inv ℝ≥0   := ⟨λa, ⟨(a.1)⁻¹, inv_nonneg.2 a.2⟩⟩
-instance : has_div ℝ≥0   := ⟨λa b, ⟨a / b, div_nonneg a.2 b.2⟩⟩
-instance : has_le ℝ≥0    := ⟨λ r s, (r:ℝ) ≤ s⟩
-instance : has_bot ℝ≥0   := ⟨0⟩
+example : has_zero ℝ≥0  := by apply_instance
+example : has_one ℝ≥0   := by apply_instance
+example : has_add ℝ≥0   := by apply_instance
+example : has_sub ℝ≥0   := by apply_instance
+example : has_mul ℝ≥0   := by apply_instance
+example : has_inv ℝ≥0   := by apply_instance
+example : has_div ℝ≥0   := by apply_instance
+example : has_le ℝ≥0    := by apply_instance
+example : has_bot ℝ≥0   := by apply_instance
 instance : inhabited ℝ≥0 := ⟨0⟩
 
 protected lemma coe_injective : function.injective (coe : ℝ≥0 → ℝ) := subtype.coe_injective
@@ -113,13 +119,6 @@ max_eq_left $ le_sub.2 $ by simp [show (r₂ : ℝ) ≤ r₁, from h]
 -- TODO: setup semifield!
 @[simp] protected lemma coe_eq_zero (r : ℝ≥0) : ↑r = (0 : ℝ) ↔ r = 0 := by norm_cast
 lemma coe_ne_zero {r : ℝ≥0} : (r : ℝ) ≠ 0 ↔ r ≠ 0 := by norm_cast
-
-instance : comm_semiring ℝ≥0 :=
-{ zero := 0,
-  add := (+),
-  one := 1,
-  mul := (*),
-  .. nnreal.coe_injective.comm_semiring _ rfl rfl (λ _ _, rfl) (λ _ _, rfl) }
 
 /-- Coercion `ℝ≥0 → ℝ` as a `ring_hom`. -/
 def to_real_hom : ℝ≥0 →+* ℝ :=
@@ -230,8 +229,7 @@ to_real_hom.to_add_monoid_hom.map_nsmul _ _
 @[simp, norm_cast] protected lemma coe_nat_cast (n : ℕ) : (↑(↑n : ℝ≥0) : ℝ) = n :=
 to_real_hom.map_nat_cast n
 
-instance : linear_order ℝ≥0 :=
-linear_order.lift (coe : ℝ≥0 → ℝ) nnreal.coe_injective
+instance : linear_order ℝ≥0 := by apply_instance
 
 @[simp, norm_cast] protected lemma coe_le_coe {r₁ r₂ : ℝ≥0} : (r₁ : ℝ) ≤ r₂ ↔ r₁ ≤ r₂ := iff.rfl
 @[simp, norm_cast] protected lemma coe_lt_coe {r₁ r₂ : ℝ≥0} : (r₁ : ℝ) < r₂ ↔ r₁ < r₂ := iff.rfl
@@ -245,7 +243,7 @@ protected lemma _root_.real.to_nnreal_mono : monotone real.to_nnreal :=
 @[simp] lemma _root_.real.to_nnreal_coe {r : ℝ≥0} : real.to_nnreal r = r :=
 nnreal.eq $ max_eq_left r.2
 
-@[simp] lemma mk_coe_nat (n : ℕ) : @eq ℝ≥0 (⟨(n : ℝ), n.cast_nonneg⟩ : ℝ≥0) n :=
+@[simp] lemma mk_coe_nat (n : ℕ) : @eq ℝ≥0 (⟨(n : ℝ), mem_Ici.mpr n.cast_nonneg⟩ : ℝ≥0) n :=
 nnreal.eq (nnreal.coe_nat_cast n).symm
 
 @[simp] lemma to_nnreal_coe_nat (n : ℕ) : real.to_nnreal n = n :=
@@ -256,49 +254,22 @@ protected def gi : galois_insertion real.to_nnreal coe :=
 galois_insertion.monotone_intro nnreal.coe_mono real.to_nnreal_mono
   real.le_coe_to_nnreal (λ _, real.to_nnreal_coe)
 
-instance : order_bot ℝ≥0 :=
-{ bot := ⊥, bot_le := assume ⟨a, h⟩, h, .. nnreal.linear_order }
+example : linear_ordered_add_comm_monoid ℝ≥0 :=
+by apply_instance
 
-instance : canonically_linear_ordered_add_monoid ℝ≥0 :=
-{ add_le_add_left       := assume a b h c,
-    nnreal.coe_le_coe.mp $ (add_le_add_left (nnreal.coe_le_coe.mpr h) c),
-  lt_of_add_lt_add_left := assume a b c bc,
-    nnreal.coe_lt_coe.mp $ lt_of_add_lt_add_left (nnreal.coe_lt_coe.mpr bc),
-  le_iff_exists_add     := assume ⟨a, ha⟩ ⟨b, hb⟩,
-    iff.intro
-      (assume h : a ≤ b,
-        ⟨⟨b - a, le_sub_iff_add_le.2 $ (zero_add _).le.trans h⟩,
-          nnreal.eq $ show b = a + (b - a), from (add_sub_cancel'_right _ _).symm⟩)
-      (assume ⟨⟨c, hc⟩, eq⟩, eq.symm ▸ show a ≤ a + c, from (le_add_iff_nonneg_right a).2 hc),
-  ..nnreal.comm_semiring,
-  ..nnreal.order_bot,
-  ..nnreal.linear_order }
+example : distrib_lattice ℝ≥0 := by apply_instance
 
-instance : linear_ordered_add_comm_monoid ℝ≥0 :=
-{ .. nnreal.comm_semiring,
-  .. nnreal.canonically_linear_ordered_add_monoid }
+example : semilattice_inf_bot ℝ≥0 :=
+by apply_instance
 
-instance : distrib_lattice ℝ≥0 := by apply_instance
+example : semilattice_sup_bot ℝ≥0 :=
+by apply_instance
 
-instance : semilattice_inf_bot ℝ≥0 :=
-{ .. nnreal.order_bot, .. nnreal.distrib_lattice }
+example : linear_ordered_semiring ℝ≥0 :=
+by apply_instance
 
-instance : semilattice_sup_bot ℝ≥0 :=
-{ .. nnreal.order_bot, .. nnreal.distrib_lattice }
-
-instance : linear_ordered_semiring ℝ≥0 :=
-{ add_left_cancel            := assume a b c h, nnreal.eq $
-    @add_left_cancel ℝ _ a b c (nnreal.eq_iff.2 h),
-  le_of_add_le_add_left      := assume a b c, @le_of_add_le_add_left ℝ _ _ _ a b c,
-  mul_lt_mul_of_pos_left     := assume a b c, @mul_lt_mul_of_pos_left ℝ _ a b c,
-  mul_lt_mul_of_pos_right    := assume a b c, @mul_lt_mul_of_pos_right ℝ _ a b c,
-  zero_le_one                := @zero_le_one ℝ _,
-  exists_pair_ne             := ⟨0, 1, ne_of_lt (@zero_lt_one ℝ _ _)⟩,
-  .. nnreal.canonically_linear_ordered_add_monoid,
-  .. nnreal.comm_semiring }
-
-instance : ordered_comm_semiring ℝ≥0 :=
-{ .. nnreal.linear_ordered_semiring, .. nnreal.comm_semiring }
+example : ordered_comm_semiring ℝ≥0 :=
+by apply_instance
 
 instance : linear_ordered_comm_group_with_zero ℝ≥0 :=
 { mul_le_mul_left := assume a b h c, mul_le_mul (le_refl c) h (zero_le a) (zero_le c),
@@ -306,15 +277,11 @@ instance : linear_ordered_comm_group_with_zero ℝ≥0 :=
   .. nnreal.linear_ordered_semiring,
   .. nnreal.comm_group_with_zero }
 
-instance : canonically_ordered_comm_semiring ℝ≥0 :=
-{ .. nnreal.canonically_linear_ordered_add_monoid,
-  .. nnreal.comm_semiring,
-  .. (show no_zero_divisors ℝ≥0, by apply_instance),
-  .. nnreal.comm_group_with_zero }
+example : canonically_ordered_comm_semiring ℝ≥0 :=
+by apply_instance
 
-instance : densely_ordered ℝ≥0 :=
-⟨assume a b (h : (a : ℝ) < b), let ⟨c, hac, hcb⟩ := exists_between h in
-  ⟨⟨c, le_trans a.property $ le_of_lt $ hac⟩, hac, hcb⟩⟩
+example : densely_ordered ℝ≥0 :=
+by apply_instance
 
 instance : no_top_order ℝ≥0 :=
 ⟨assume a, let ⟨b, hb⟩ := no_top (a:ℝ) in ⟨⟨b, le_trans a.property $ le_of_lt $ hb⟩, hb⟩⟩
@@ -331,6 +298,7 @@ lemma bdd_below_coe (s : set ℝ≥0) : bdd_below ((coe : ℝ≥0 → ℝ) '' s)
 instance : has_Sup ℝ≥0 :=
 ⟨λs, ⟨Sup ((coe : ℝ≥0 → ℝ) '' s),
   begin
+    rw [mem_Ici],
     cases s.eq_empty_or_nonempty with h h,
     { simp [h, set.image_empty, real.Sup_empty] },
     rcases h with ⟨⟨b, hb⟩, hbs⟩,
@@ -344,7 +312,7 @@ instance : has_Inf ℝ≥0 :=
   begin
     cases s.eq_empty_or_nonempty with h h,
     { simp [h, set.image_empty, real.Inf_empty] },
-    exact le_cInf (h.image _) (assume r ⟨q, _, eq⟩, eq ▸ q.2)
+    exact mem_Ici.mpr (le_cInf (h.image _) (λ r ⟨q, _, eq⟩, eq ▸ q.2))
   end⟩⟩
 
 lemma coe_Sup (s : set ℝ≥0) : (↑(Sup s) : ℝ) = Sup ((coe : ℝ≥0 → ℝ) '' s) := rfl
@@ -362,7 +330,7 @@ instance : conditionally_complete_linear_order_bot ℝ≥0 :=
   cSup_empty := nnreal.eq $ by simp [coe_Sup, real.Sup_empty]; refl,
   decidable_le := begin assume x y, apply classical.dec end,
   .. nnreal.linear_ordered_semiring, .. lattice_of_linear_order,
-  .. nnreal.order_bot }
+  .. nnreal.semilattice_inf_bot }
 
 instance : archimedean ℝ≥0 :=
 ⟨ assume x y pos_y,
@@ -553,73 +521,52 @@ section sub
 lemma sub_def {r p : ℝ≥0} : r - p = real.to_nnreal (r - p) := rfl
 
 lemma sub_eq_zero {r p : ℝ≥0} (h : r ≤ p) : r - p = 0 :=
-nnreal.eq $ max_eq_right $ sub_le_iff_le_add.2 $ by simpa [nnreal.coe_le_coe] using h
+sub_eq_zero_iff_le.mpr h
 
-@[simp] lemma sub_self {r : ℝ≥0} : r - r = 0 := sub_eq_zero $ le_refl r
+@[simp] lemma sub_self {r : ℝ≥0} : r - r = 0 := sub_self'
 
 @[simp] lemma sub_zero {r : ℝ≥0} : r - 0 = r :=
-by rw [sub_def, nnreal.coe_zero, sub_zero, real.to_nnreal_coe]
+sub_zero'
 
 lemma sub_pos {r p : ℝ≥0} : 0 < r - p ↔ p < r :=
-to_nnreal_pos.trans $ sub_pos.trans $ nnreal.coe_lt_coe
+sub_pos_iff_lt
 
 protected lemma sub_lt_self {r p : ℝ≥0} : 0 < r → 0 < p → r - p < r :=
-assume hr hp,
-begin
-  cases le_total r p,
-  { rwa [sub_eq_zero h] },
-  { rw [← nnreal.coe_lt_coe, nnreal.coe_sub h], exact sub_lt_self _ hp }
-end
+sub_lt_self'
 
 @[simp] lemma sub_le_iff_le_add {r p q : ℝ≥0} : r - p ≤ q ↔ r ≤ q + p :=
-match le_total p r with
-| or.inl h := by rw [← nnreal.coe_le_coe, ← nnreal.coe_le_coe, nnreal.coe_sub h, nnreal.coe_add,
-    sub_le_iff_le_add]
-| or.inr h :=
-  have r ≤ p + q, from le_add_right h,
-  by simpa [nnreal.coe_le_coe, nnreal.coe_le_coe, sub_eq_zero h, add_comm]
-end
+sub_le_iff_right
 
 @[simp] lemma sub_le_self {r p : ℝ≥0} : r - p ≤ r :=
-sub_le_iff_le_add.2 $ le_add_right $ le_refl r
+sub_le_self'
 
 lemma add_sub_cancel {r p : ℝ≥0} : (p + r) - r = p :=
-nnreal.eq $ by rw [nnreal.coe_sub, nnreal.coe_add, add_sub_cancel]; exact le_add_self
+add_sub_cancel_right
 
 lemma add_sub_cancel' {r p : ℝ≥0} : (r + p) - r = p :=
-by rw [add_comm, add_sub_cancel]
+add_sub_cancel_left
 
 lemma sub_add_eq_max {r p : ℝ≥0} : (r - p) + p = max r p :=
-nnreal.eq $ by rw [sub_def, nnreal.coe_add, coe_max, real.to_nnreal, coe_mk,
-  ← max_add_add_right, zero_add, sub_add_cancel]
+sub_add_eq_max _ _
 
 lemma add_sub_eq_max {r p : ℝ≥0} : p + (r - p) = max p r :=
-by rw [add_comm, sub_add_eq_max, max_comm]
+add_sub_eq_max _ _
 
 @[simp] lemma sub_add_cancel_of_le {a b : ℝ≥0} (h : b ≤ a) : (a - b) + b = a :=
-by rw [sub_add_eq_max, max_eq_left h]
+sub_add_cancel_of_le h
 
 lemma sub_sub_cancel_of_le {r p : ℝ≥0} (h : r ≤ p) : p - (p - r) = r :=
 by rw [nnreal.sub_def, nnreal.sub_def, real.coe_to_nnreal _ $ sub_nonneg.2 h,
   sub_sub_cancel, real.to_nnreal_coe]
 
 lemma lt_sub_iff_add_lt {p q r : ℝ≥0} : p < q - r ↔ p + r < q :=
-begin
-  split,
-  { assume H,
-    have : (((q - r) : ℝ≥0) : ℝ) = (q : ℝ) - (r : ℝ) :=
-      nnreal.coe_sub (le_of_lt (sub_pos.1 (lt_of_le_of_lt (zero_le _) H))),
-    rwa [← nnreal.coe_lt_coe, this, lt_sub_iff_add_lt, ← nnreal.coe_add] at H },
-  { assume H,
-    have : r ≤ q := le_trans (le_add_self) (le_of_lt H),
-    rwa [← nnreal.coe_lt_coe, nnreal.coe_sub this, lt_sub_iff_add_lt, ← nnreal.coe_add] }
-end
+lt_sub_iff_right
 
 lemma sub_lt_iff_lt_add {a b c : ℝ≥0} (h : b ≤ a) : a - b < c ↔ a < b + c :=
-by simp only [←nnreal.coe_lt_coe, nnreal.coe_sub h, nnreal.coe_add, sub_lt_iff_lt_add']
+sub_lt_iff_left h
 
 lemma sub_eq_iff_eq_add {a b c : ℝ≥0} (h : b ≤ a) : a - b = c ↔ a = c + b :=
-by rw [←nnreal.eq_iff, nnreal.coe_sub h, ←nnreal.eq_iff, nnreal.coe_add, sub_eq_iff_eq_add]
+sub_eq_iff_eq_add_of_le h
 
 end sub
 

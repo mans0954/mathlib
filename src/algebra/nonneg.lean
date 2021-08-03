@@ -1,22 +1,25 @@
-import algebra.linear_ordered_comm_group_with_zero
+/-
+Copyright (c) 2021 Floris van Doorn. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Floris van Doorn
+-/
 import data.set.intervals.ord_connected
 import algebra.ordered_sub
+import order.lattice_intervals
+
+/-!
+## The type of nonnegative elements
+
+This file proves properties about `{x : α // 0 ≤ x}`, or equivalently, `Ici (0 : α)` for various
+types `α`. In particular, `Ici 0` is a `canonically_linear_ordered_add_monoid` if `α` is a
+`linear_ordered_ring`.
+
+When `α` is `ℝ`, this will give us some properties about `ℝ≥0`.
+-/
 
 open set
 
 variables {α : Type*}
-
--- todo: move
-instance [partial_order α] {a : α} : order_bot (Ici a) :=
-{ bot := ⟨a, le_rfl⟩, bot_le := λ x, x.2, .. subtype.partial_order _ }
-
--- todo: (re)move
-instance [linear_order α] {a : α} : semilattice_inf_bot (Ici a) :=
-{ .. set.Ici.order_bot, .. distrib_lattice_of_linear_order  }
-
--- todo: (re)move
-instance [linear_order α] {a : α} : semilattice_sup_bot (Ici a) :=
-{ .. set.Ici.order_bot, .. distrib_lattice_of_linear_order  }
 
 -- todo: move
 instance [partial_order α] [no_top_order α] {a : α} : no_top_order (Ici a) :=
@@ -24,6 +27,8 @@ instance [partial_order α] [no_top_order α] {a : α} : no_top_order (Ici a) :=
 
 instance [has_zero α] [preorder α] : has_zero (Ici (0 : α)) :=
 ⟨⟨0, le_rfl⟩⟩
+
+@[simp] protected lemma coe_zero [has_zero α] [preorder α] : ((0 : Ici (0 : α)) : α) = 0 := rfl
 
 @[simp] lemma mk_eq_zero [has_zero α] [preorder α] {x : α} (hx : 0 ≤ x) :
   (⟨x, hx⟩ : Ici (0 : α)) = 0 ↔ x = 0 :=
@@ -36,6 +41,10 @@ instance [add_zero_class α] [preorder α] [covariant_class α α (+) (≤)] :
 @[simp] lemma mk_add_mk [add_zero_class α] [preorder α] [covariant_class α α (+) (≤)] {x y : α}
   (hx : 0 ≤ x) (hy : 0 ≤ y) : (⟨x, hx⟩ : Ici (0 : α)) + ⟨y, hy⟩ = ⟨x + y, add_nonneg hx hy⟩ :=
 rfl
+
+@[simp, norm_cast]
+protected lemma coe_add [add_zero_class α] [preorder α] [covariant_class α α (+) (≤)]
+  (a b : Ici (0 : α)) : ((a + b : Ici (0 : α)) : α) = a + b := rfl
 
 instance [ordered_add_comm_monoid α] : ordered_add_comm_monoid (Ici (0 : α)) :=
 subtype.coe_injective.ordered_add_comm_monoid (coe : Ici (0 : α) → α) rfl (λ x y, rfl)
@@ -55,12 +64,18 @@ subtype.coe_injective.linear_ordered_cancel_add_comm_monoid
 instance [ordered_semiring α] : has_one (Ici (0 : α)) :=
 { one := ⟨1, zero_le_one⟩ }
 
+@[simp] protected lemma coe_one [ordered_semiring α] : ((1 : Ici (0 : α)) : α) = 1 := rfl
+
 @[simp] lemma mk_eq_one [ordered_semiring α] {x : α} (hx : 0 ≤ x) :
   (⟨x, hx⟩ : Ici (0 : α)) = 1 ↔ x = 1 :=
 subtype.ext_iff
 
 instance [ordered_semiring α] : has_mul (Ici (0 : α)) :=
 { mul := λ x y, ⟨x * y, mul_nonneg x.2 y.2⟩ }
+
+@[simp, norm_cast]
+protected lemma coe_mul [ordered_semiring α] (a b : Ici (0 : α)) :
+  ((a * b : Ici (0 : α)) : α) = a * b := rfl
 
 @[simp] lemma mk_mul_mk [ordered_semiring α] {x y : α} (hx : 0 ≤ x) (hy : 0 ≤ y) :
   (⟨x, hx⟩ : Ici (0 : α)) * ⟨y, hy⟩ = ⟨x * y, mul_nonneg hx hy⟩ :=
@@ -80,6 +95,28 @@ instance [linear_ordered_semiring α] : nontrivial (Ici (0 : α)) :=
 instance [linear_ordered_semiring α] : linear_ordered_semiring (Ici (0 : α)) :=
 subtype.coe_injective.linear_ordered_semiring
   (coe : Ici (0 : α) → α) rfl rfl (λ x y, rfl) (λ x y, rfl)
+
+instance [linear_ordered_field α] : has_inv (Ici (0 : α)) :=
+{ inv := λ x, ⟨x⁻¹, inv_nonneg.mpr x.2⟩ }
+
+@[simp, norm_cast]
+protected lemma coe_inv [linear_ordered_field α] (a : Ici (0 : α)) :
+  ((a⁻¹ : Ici (0 : α)) : α) = a⁻¹ := rfl
+
+@[simp] lemma inv_mk [linear_ordered_field α] {x : α} (hx : 0 ≤ x) :
+  (⟨x, hx⟩ : Ici (0 : α))⁻¹ = ⟨x⁻¹, inv_nonneg.mpr hx⟩ :=
+rfl
+
+instance [linear_ordered_field α] : has_div (Ici (0 : α)) :=
+{ div := λ x y, ⟨x / y, div_nonneg x.2 y.2⟩ }
+
+@[simp, norm_cast]
+protected lemma coe_div [linear_ordered_field α] (a b : Ici (0 : α)) :
+  ((a / b : Ici (0 : α)) : α) = a / b := rfl
+
+@[simp] lemma mk_div_mk [linear_ordered_field α] {x y : α} (hx : 0 ≤ x) (hy : 0 ≤ y) :
+  (⟨x, hx⟩ : Ici (0 : α)) / ⟨y, hy⟩ = ⟨x / y, div_nonneg hx hy⟩ :=
+rfl
 
 -- todo: move
 lemma le_iff_exists_nonneg_add [ordered_ring α] (a b : α) :
