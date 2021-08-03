@@ -17,6 +17,9 @@ about multiplicative functions, such as the totient function and the Möbius fun
   define `P` for all natural numbers.
 * `nat.rec_on_coprime`: Given `P 0`, `P (p ^ k)` for all prime powers, and a way to extend `P a` and
   `P b` to `P (a * b)` when `a, b` are coprime, you can define `P` for all natural numbers.
+* `nat.rec_on_coprime'`: Given `P 0`, `P 1`, and `P (p ^ k)` for positive prime powers, and a way to
+  extend `P a` and `P b` to `P (a * b)` when `a, b` are coprime,
+  you can define `P` for all natural numbers.
 * `nat.rec_on_completely_multiplicative`: Given `P 0`, `P 1`, `P p` for all primes, and a proof that
   you can extend `P a` and `P b` to `P (a * b)`, you can define `P` for all natural numbers.
 
@@ -86,13 +89,21 @@ def rec_on_prime_pow {P : ℕ → Sort*} (h0 : P 0) (h1 : P 1)
     end
   end
 
+/-- Given `P 0`, `P 1`, and `P (p ^ k)` for positive prime powers, and a way to extend `P a` and
+`P b` to `P (a * b)` when `a, b` are coprime, you can define `P` for all natural numbers. -/
+@[elab_as_eliminator]
+def rec_on_coprime' {P : ℕ → Sort*} (hp : ∀ p n : ℕ, prime p → 0 < n → P (p ^ n))
+  (h0 : P 0) (h1 : P 1) (h : ∀ a b, coprime a b → P a → P b → P (a * b)) : ∀ a, P a :=
+rec_on_prime_pow h0 h1 $ λ a p n hp' hpa ha,
+  h (p ^ n) a ((prime.coprime_pow_of_not_dvd hp' hpa).symm)
+  (if h : n = 0 then eq.rec h1 h.symm else hp p n hp' $ nat.pos_of_ne_zero h) ha
+
 /-- Given `P 0`, `P (p ^ k)` for all prime powers, and a way to extend `P a` and `P b` to
 `P (a * b)` when `a, b` are coprime, you can define `P` for all natural numbers. -/
 @[elab_as_eliminator]
 def rec_on_coprime {P : ℕ → Sort*} (h0 : P 0) (hp : ∀ p n : ℕ, prime p → P (p ^ n))
   (h : ∀ a b, coprime a b → P a → P b → P (a * b)) : ∀ a, P a :=
-rec_on_prime_pow h0 (hp 2 0 prime_two) $ λ a p n hp' hpa ha,
-  h (p ^ n) a ((prime.coprime_pow_of_not_dvd hp' hpa).symm) (hp p n hp') ha
+rec_on_coprime' (λ p n h _, hp p n h) h0 (hp 2 0 prime_two) h
 
 /-- Given `P 0`, `P 1`, `P p` for all primes, and a proof that you can extend
 `P a` and `P b` to `P (a * b)`, you can define `P` for all natural numbers. -/
