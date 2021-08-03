@@ -722,7 +722,7 @@ sub_add_cancel_of_le h
 add_sub_cancel_of_le h
 
 lemma sub_add_self_eq_max : (a - b) + b = max a b :=
-by { exact sub_add_eq_max a b, ext, refl, } -- :( -- fixed now?
+sub_add_eq_max a b
 
 lemma le_sub_add_self : a ≤ (a - b) + b :=
 le_sub_add

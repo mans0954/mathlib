@@ -328,7 +328,6 @@ instance : conditionally_complete_linear_order_bot ℝ≥0 :=
   le_cInf := assume s a hs h, show (↑a : ℝ) ≤ Inf ((coe : ℝ≥0 → ℝ) '' s), from
     le_cInf (by simp [hs]) $ assume r ⟨b, hb, eq⟩, eq ▸ h hb,
   cSup_empty := nnreal.eq $ by simp [coe_Sup, real.Sup_empty]; refl,
-  decidable_le := begin assume x y, apply classical.dec end,
   .. nnreal.linear_ordered_semiring, .. lattice_of_linear_order,
   .. nnreal.semilattice_inf_bot }
 
