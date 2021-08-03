@@ -1003,78 +1003,121 @@ by rw [← e.dimH_preimage univ, preimage_univ]
 end isometric
 
 /-!
+### Hausdorff measure and Lebesgue measure
+-/
+
+/-- In the space `ι → ℝ`, Hausdorff measure coincides exactly with Lebesgue measure. -/
+theorem hausdorff_measure_pi_real {ι : Type*} [fintype ι] [nonempty ι] :
+  (μH[fintype.card ι] : measure (ι → ℝ)) = volume :=
+begin
+  classical,
+  -- it suffices to check that the two measures coincide on products of rational intervals
+  refine (pi_eq_generate_from (λ i, real.borel_eq_generate_from_Ioo_rat.symm)
+    (λ i, real.is_pi_system_Ioo_rat) (λ i, real.finite_spanning_sets_in_Ioo_rat _)
+    _).symm,
+  simp only [mem_Union, mem_singleton_iff],
+  -- fix such a product `s` of rational intervals, of the form `Π (a i, b i)`.
+  intros s hs,
+  choose a b H using hs,
+  obtain rfl : s = λ i, Ioo (a i) (b i), from funext (λ i, (H i).2), replace H := λ i, (H i).1,
+  apply le_antisymm _,
+  -- first check that `volume s ≤ μH s`
+  { have Hle : volume ≤ (μH[fintype.card ι] : measure (ι → ℝ)),
+    { refine le_hausdorff_measure _ _ ∞ ennreal.coe_lt_top (λ s h₁ h₂, _),
+      rw [ennreal.rpow_nat_cast],
+      exact real.volume_pi_le_diam_pow s },
+    rw [← volume_pi_pi (λ i, Ioo (a i : ℝ) (b i)) (λ i, measurable_set_Ioo)],
+    exact measure.le_iff'.1 Hle _ },
+  /- For the other inequality `μH s ≤ volume s`, we use a covering of `s` by sets of small diameter
+  `1/n`, namely cubes with left-most point of the form `a i + f i / n` with `f i` ranging between
+  `0` and `⌈(b i - a i) * n⌉`. Their number is asymptotic to `n^d * Π (b i - a i)`. -/
+  have Hpos' : 0 < fintype.card ι := fintype.card_pos_iff.2 ‹nonempty ι›,
+  have Hpos : 0 < (fintype.card ι : ℝ), by simp only [Hpos', nat.cast_pos],
+  have I : ∀ i, 0 ≤ (b i : ℝ) - a i := λ i, by simpa only [sub_nonneg, rat.cast_le] using (H i).le,
+  let γ := λ (n : ℕ), (Π (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n))),
+  haveI : ∀ n, encodable (γ n) :=
+    λ n, (fintype_pi ι (λ (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n)))).out,
+  let t : Π (n : ℕ), γ n → set (ι → ℝ) :=
+    λ n f, set.pi univ (λ i, Icc (a i + f i / n) (a i + (f i + 1) / n)),
+  have A : tendsto (λ (n : ℕ), 1/(n : ℝ≥0∞)) at_top (𝓝 0),
+    by simp only [one_div, ennreal.tendsto_inv_nat_nhds_zero],
+  have B : ∀ᶠ n in at_top, ∀ (i : γ n), diam (t n i) ≤ 1 / n,
+  { apply eventually_at_top.2 ⟨1, λ n hn, _⟩,
+    assume f,
+    apply diam_pi_le_of_le (λ b, _),
+    simp only [real.ediam_Icc, add_div, ennreal.of_real_div_of_pos (nat.cast_pos.mpr hn), le_refl,
+      add_sub_add_left_eq_sub, add_sub_cancel', ennreal.of_real_one, ennreal.of_real_coe_nat] },
+  have C : ∀ᶠ n in at_top, set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)) ⊆ ⋃ (i : γ n), t n i,
+  { apply eventually_at_top.2 ⟨1, λ n hn, _⟩,
+    have npos : (0 : ℝ) < n := nat.cast_pos.2 hn,
+    assume x hx,
+    simp only [mem_Ioo, mem_univ_pi] at hx,
+    simp only [mem_Union, mem_Ioo, mem_univ_pi, coe_coe],
+    let f : γ n := λ i, ⟨nat_floor ((x i - a i) * n),
+    begin
+      apply nat_floor_lt_nat_ceil_of_lt_of_pos,
+      { refine (mul_lt_mul_right npos).2 _,
+        simp only [(hx i).right, sub_lt_sub_iff_right] },
+      { refine mul_pos _ npos,
+        simpa only [rat.cast_lt, sub_pos] using H i }
+    end⟩,
+    refine ⟨f, λ i, ⟨_, _⟩⟩,
+    { calc (a i : ℝ) + (nat_floor ((x i - a i) * n)) / n
+      ≤ (a i : ℝ) + (((x i - a i) * n)) / n :
+          begin
+            refine add_le_add le_rfl ((div_le_div_right npos).2 _),
+            exact nat_floor_le (mul_nonneg (sub_nonneg.2 (hx i).1.le) npos.le),
+          end
+      ... = x i : by field_simp [npos.ne'] },
+    { calc x i
+      = (a i : ℝ) + ((x i - a i) * n) / n : by field_simp [npos.ne']
+      ... ≤ (a i : ℝ) + (nat_floor ((x i - a i) * n) + 1) / n :
+        add_le_add le_rfl ((div_le_div_right npos).2 (lt_nat_floor_add_one _).le) } },
+  calc μH[fintype.card ι] (set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)))
+    ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), diam (t n i) ^ ↑(fintype.card ι)) :
+      hausdorff_measure_le Hpos (set.pi univ (λ i, Ioo (a i : ℝ) (b i)))
+        (λ (n : ℕ), 1/(n : ℝ≥0∞)) A t B C
+  ... ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), (1/n) ^ (fintype.card ι)) :
+    begin
+      refine liminf_le_liminf _ (by is_bounded_default),
+      filter_upwards [B],
+      assume n hn,
+      apply ennreal.tsum_le_tsum (λ i, _),
+      simp only [← ennreal.rpow_nat_cast],
+      exact ennreal.rpow_le_rpow (hn i) Hpos.le,
+    end
+  ... = liminf at_top (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ≥0∞) / n) :
+  begin
+    congr' 1,
+    ext1 n,
+    simp only [tsum_fintype, finset.card_univ, nat.cast_prod, one_div, fintype.card_fin,
+      finset.sum_const, nsmul_eq_mul, fintype.card_pi],
+    simp_rw [← finset.card_univ, ← finset.prod_const, ← finset.prod_mul_distrib],
+    refl,
+  end
+  ... = ∏ (i : ι), volume (Ioo (a i : ℝ) (b i)) :
+  begin
+    simp only [real.volume_Ioo],
+    apply tendsto.liminf_eq,
+    refine ennreal.tendsto_finset_prod_of_ne_top _ (λ i hi, _) (λ i hi, _),
+    { apply tendsto.congr' _ ((ennreal.continuous_of_real.tendsto _).comp
+        ((tendsto_nat_ceil_mul_div_at_top (I i)).comp tendsto_coe_nat_at_top_at_top)),
+      apply eventually_at_top.2 ⟨1, λ n hn, _⟩,
+      simp only [ennreal.of_real_div_of_pos (nat.cast_pos.mpr hn), comp_app,
+        ennreal.of_real_coe_nat] },
+    { simp only [ennreal.of_real_ne_top, ne.def, not_false_iff] }
+  end
+end
+
+/-!
 ### Hausdorff dimension and `C¹`-smooth maps
 
 `C¹`-smooth maps are locally Lipschitz continuous, hence they do not increase the Hausdorff
 dimension of sets.
 -/
 
-
 variables {E F : Type*} [normed_group E] [normed_space ℝ E] [measurable_space E] [borel_space E]
   [normed_group F] [normed_space ℝ F] [measurable_space F] [borel_space F]
-
-lemma hausdorff_measure_pi_real {ι : Type*} [fintype ι] [nonempty ι] :
-  (μH[fintype.card ι] : measure (ι → ℝ)) = volume :=
-begin
-  classical,
-  have Hle : volume ≤ (μH[fintype.card ι] : measure (ι → ℝ)),
-  { refine le_hausdorff_measure _ _ ∞ ennreal.coe_lt_top (λ s h₁ h₂, _),
-    rw [ennreal.rpow_nat_cast],
-    exact real.volume_pi_le_diam_pow s },
-  refine (pi_eq_generate_from (λ i, real.borel_eq_generate_from_Ioo_rat.symm)
-    (λ i, real.is_pi_system_Ioo_rat) (λ i, real.finite_spanning_sets_in_Ioo_rat _)
-    _).symm,
-  simp only [mem_Union, mem_singleton_iff],
-  intros s hs,
-  choose a b H using hs,
-  obtain rfl : s = λ i, Ioo (a i) (b i), from funext (λ i, (H i).2), replace H := λ i, (H i).1,
-  apply le_antisymm,
-  { have Hpos : 0 < (fintype.card ι : ℝ), by simp [fintype.card_pos_iff.2 ‹nonempty ι›],
-    let γ := λ (n : ℕ), (Π (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n))),
-    haveI : ∀ n, encodable (γ n) :=
-      λ n, (fintype_pi ι (λ (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n)))).out,
-    let t : Π (n : ℕ), γ n → set (ι → ℝ) :=
-      λ n f, set.pi univ (λ i, Ioo (a i + f i /n) (a i+ (f i + 1)/n)),
-    have A : tendsto (λ (n : ℕ), 1/(n : ℝ≥0∞)) at_top (𝓝 0) := sorry,
-    have B : ∀ᶠ n in at_top, ∀ (i : γ n), diam (t n i) ≤ 1 / n := sorry,
-    have C : ∀ᶠ n in at_top, set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)) ⊆ ⋃ (i : γ n), t n i := sorry,
-    calc μH[fintype.card ι] (set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)))
-      ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), diam (t n i) ^ ↑(fintype.card ι)) :
-        hausdorff_measure_le Hpos (set.pi univ (λ i, Ioo (a i : ℝ) (b i)))
-          (λ (n : ℕ), 1/(n : ℝ≥0∞)) A t B C
-    ... ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), (1/n) ^ (fintype.card ι)) :
-      begin
-        refine liminf_le_liminf _ (by is_bounded_default),
-        filter_upwards [B],
-        assume n hn,
-        apply ennreal.tsum_le_tsum (λ i, _),
-        simp only [← ennreal.rpow_nat_cast],
-        exact ennreal.rpow_le_rpow (hn i) Hpos.le,
-      end
-    ... = liminf at_top (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ≥0∞) / n) :
-    begin
-      congr' 1,
-      ext1 n,
-      simp only [tsum_fintype, finset.card_univ, nat.cast_prod, one_div, fintype.card_fin,
-        finset.sum_const, nsmul_eq_mul, fintype.card_pi],
-      simp_rw [← finset.card_univ, ← finset.prod_const, ← finset.prod_mul_distrib],
-      refl,
-    end
-    ... = ∏ (i : ι), volume (Ioo (a i : ℝ) (b i)) :
-    begin
-      simp only [real.volume_Ioo],
-      apply tendsto.liminf_eq,
-      have : tendsto (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ) / n) at_top
-        (𝓝 (∏ (i : ι), ((b i : ℝ) - a i))),
-      { refine tendsto_finset_prod _ (λ i hi, _),
-        have I : 0 ≤ (b i : ℝ) - a i, by simpa only [sub_nonneg, rat.cast_le] using (H i).le,
-        exact (tendsto_nat_ceil_mul_div_at_top I).comp tendsto_coe_nat_at_top_at_top },
-      sorry
-
-    end },
-  { rw [← volume_pi_pi (λ i, Ioo (a i : ℝ) (b i)) (λ i, measurable_set_Ioo)],
-    exact measure.le_iff'.1 Hle _ }
-end
 
 /-- Let `f` be a function defined on a finite dimensional real normed space. If `f` is `C¹`-smooth
 on a closed convex set `s`, then the Hausdorff dimension of `f '' s` is less than or equal to the
