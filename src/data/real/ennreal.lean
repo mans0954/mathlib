@@ -607,9 +607,63 @@ by simpa only [add_comm _ a] using le_of_add_le_add_left
 
 section mul
 
+set_option pp.implicit true
 @[mono] lemma mul_le_mul : a ≤ b → c ≤ d → a * c ≤ b * d :=
 mul_le_mul'
 
+#print canonically_ordered_comm_semiring.to_covariant_mul_le
+-- set_option pp.notation false
+open tactic
+example : (@has_le.le ℝ≥0∞
+       (@preorder.to_has_le ℝ≥0∞
+          (@directed_order.to_preorder ℝ≥0∞
+             (@linear_order.to_directed_order ℝ≥0∞
+                (@conditionally_complete_linear_order.to_linear_order ℝ≥0∞
+                   (@conditionally_complete_linear_order_of_complete_linear_order ℝ≥0∞
+                      ennreal.complete_linear_order)))))) = (@has_le.le ennreal
+       (@preorder.to_has_le ennreal
+          (@partial_order.to_preorder ennreal
+             (@ordered_add_comm_monoid.to_partial_order ennreal
+                (@canonically_ordered_add_monoid.to_ordered_add_comm_monoid ennreal
+                   (@canonically_ordered_comm_semiring.to_canonically_ordered_add_monoid ennreal ennreal.canonically_ordered_comm_semiring)))))) :=
+by do
+  tgt ← target,
+  (lhs, rhs) ← match_eq tgt,
+  lhs' ← whnf lhs transparency.instances,
+  rhs' ← whnf rhs transparency.instances,
+  trace lhs',
+  trace rhs',
+  skip
+
+#print subtype.partial_order
+#print Ici.ordered_add_comm_monoid
+#print function.injective.ordered_add_comm_monoid
+#print partial_order.lift
+example (x y : nnreal) : @has_le.le nnreal
+                (@preorder.to_has_le nnreal
+                   (@partial_order.to_preorder nnreal
+                      (@order_bot.to_partial_order nnreal
+                         (@canonically_ordered_add_monoid.to_order_bot nnreal
+                            (@canonically_ordered_comm_semiring.to_canonically_ordered_add_monoid nnreal
+                               nnreal.canonically_ordered_comm_semiring))))) x y = @has_le.le nnreal
+                (@preorder.to_has_le nnreal
+                   (@partial_order.to_preorder nnreal
+                      (@semilattice_inf.to_partial_order nnreal
+                         (@lattice.to_semilattice_inf nnreal
+                            (@lattice_of_linear_order nnreal
+                               (@conditionally_complete_linear_order.to_linear_order nnreal
+                                  (@conditionally_complete_linear_order_bot.to_conditionally_complete_linear_order
+                                     nnreal
+                                     nnreal.conditionally_complete_linear_order_bot))))))) x y :=
+by do
+  tgt ← target,
+  (lhs, rhs) ← match_eq tgt,
+  lhs' ← whnf lhs transparency.instances,
+  rhs' ← whnf rhs transparency.instances,
+  trace lhs',
+  trace rhs',
+  tactic.reflexivity transparency.instances
+#exit
 @[mono] lemma mul_lt_mul (ac : a < c) (bd : b < d) : a * b < c * d :=
 begin
   rcases lt_iff_exists_nnreal_btwn.1 ac with ⟨a', aa', a'c⟩,
