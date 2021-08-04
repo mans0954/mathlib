@@ -1524,7 +1524,8 @@ attribute [simp] measure_singleton
 
 variables [has_no_atoms μ]
 
-lemma _root_.set.subsingleton.measure_zero (hs : s.subsingleton) (μ : measure α) [has_no_atoms μ]: μ s = 0 :=
+lemma _root_.set.subsingleton.measure_zero (hs : s.subsingleton) (μ : measure α) [has_no_atoms μ] :
+  μ s = 0 :=
 hs.induction_on measure_empty measure_singleton
 
 @[simp] lemma measure.restrict_singleton' {a : α} :

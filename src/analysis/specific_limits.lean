@@ -936,7 +936,7 @@ tendsto_of_tendsto_of_tendsto_of_le_of_le'
 -/
 
 lemma tendsto_nat_floor_mul_div_at_top {a : ℝ} (ha : 0 ≤ a) :
-  tendsto (λ x, (nat_floor (a * x) : ℝ) / x) at_top (𝓝 a) :=
+  tendsto (λ x, (⌊a * x⌋₊ : ℝ) / x) at_top (𝓝 a) :=
 begin
   have A : tendsto (λ (x : ℝ), a - x⁻¹) at_top (𝓝 (a - 0)) :=
     tendsto_const_nhds.sub tendsto_inv_at_top_zero,
@@ -953,7 +953,7 @@ begin
 end
 
 lemma tendsto_nat_ceil_mul_div_at_top {a : ℝ} (ha : 0 ≤ a) :
-  tendsto (λ x, (nat_ceil (a * x) : ℝ) / x) at_top (𝓝 a) :=
+  tendsto (λ x, (⌈a * x⌉₊ : ℝ) / x) at_top (𝓝 a) :=
 begin
   have A : tendsto (λ (x : ℝ), a + x⁻¹) at_top (𝓝 (a + 0)) :=
     tendsto_const_nhds.add tendsto_inv_at_top_zero,

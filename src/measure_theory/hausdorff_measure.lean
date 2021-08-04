@@ -1034,9 +1034,8 @@ begin
   have Hpos' : 0 < fintype.card ι := fintype.card_pos_iff.2 ‹nonempty ι›,
   have Hpos : 0 < (fintype.card ι : ℝ), by simp only [Hpos', nat.cast_pos],
   have I : ∀ i, 0 ≤ (b i : ℝ) - a i := λ i, by simpa only [sub_nonneg, rat.cast_le] using (H i).le,
-  let γ := λ (n : ℕ), (Π (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n))),
-  haveI : ∀ n, encodable (γ n) :=
-    λ n, (fintype_pi ι (λ (i : ι), fin (nat_ceil (((b i : ℝ) - a i) * n)))).out,
+  let γ := λ (n : ℕ), (Π (i : ι), fin ⌈((b i : ℝ) - a i) * n⌉₊),
+  haveI : ∀ n, encodable (γ n) := λ n, (fintype_pi ι (λ (i : ι), fin _)).out,
   let t : Π (n : ℕ), γ n → set (ι → ℝ) :=
     λ n f, set.pi univ (λ i, Icc (a i + f i / n) (a i + (f i + 1) / n)),
   have A : tendsto (λ (n : ℕ), 1/(n : ℝ≥0∞)) at_top (𝓝 0),
@@ -1053,7 +1052,7 @@ begin
     assume x hx,
     simp only [mem_Ioo, mem_univ_pi] at hx,
     simp only [mem_Union, mem_Ioo, mem_univ_pi, coe_coe],
-    let f : γ n := λ i, ⟨nat_floor ((x i - a i) * n),
+    let f : γ n := λ i, ⟨⌊(x i - a i) * n⌋₊,
     begin
       apply nat_floor_lt_nat_ceil_of_lt_of_pos,
       { refine (mul_lt_mul_right npos).2 _,
@@ -1062,8 +1061,8 @@ begin
         simpa only [rat.cast_lt, sub_pos] using H i }
     end⟩,
     refine ⟨f, λ i, ⟨_, _⟩⟩,
-    { calc (a i : ℝ) + (nat_floor ((x i - a i) * n)) / n
-      ≤ (a i : ℝ) + (((x i - a i) * n)) / n :
+    { calc (a i : ℝ) + ⌊(x i - a i) * n⌋₊ / n
+      ≤ (a i : ℝ) + ((x i - a i) * n) / n :
           begin
             refine add_le_add le_rfl ((div_le_div_right npos).2 _),
             exact nat_floor_le (mul_nonneg (sub_nonneg.2 (hx i).1.le) npos.le),
@@ -1071,7 +1070,7 @@ begin
       ... = x i : by field_simp [npos.ne'] },
     { calc x i
       = (a i : ℝ) + ((x i - a i) * n) / n : by field_simp [npos.ne']
-      ... ≤ (a i : ℝ) + (nat_floor ((x i - a i) * n) + 1) / n :
+      ... ≤ (a i : ℝ) + (⌊(x i - a i) * n⌋₊ + 1) / n :
         add_le_add le_rfl ((div_le_div_right npos).2 (lt_nat_floor_add_one _).le) } },
   calc μH[fintype.card ι] (set.pi univ (λ (i : ι), Ioo (a i : ℝ) (b i)))
     ≤ liminf at_top (λ (n : ℕ), ∑' (i : γ n), diam (t n i) ^ ↑(fintype.card ι)) :
@@ -1086,7 +1085,7 @@ begin
       simp only [← ennreal.rpow_nat_cast],
       exact ennreal.rpow_le_rpow (hn i) Hpos.le,
     end
-  ... = liminf at_top (λ (n : ℕ), ∏ (i : ι), (nat_ceil (((b i : ℝ) - a i) * n) : ℝ≥0∞) / n) :
+  ... = liminf at_top (λ (n : ℕ), ∏ (i : ι), (⌈((b i : ℝ) - a i) * n⌉₊ : ℝ≥0∞) / n) :
   begin
     congr' 1,
     ext1 n,

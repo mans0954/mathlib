@@ -397,7 +397,7 @@ lemma le_of_nat_ceil_le {x : α} {n : ℕ} (h : ⌈x⌉₊ ≤ n) : x ≤ n :=
 le_trans (le_nat_ceil x) (by exact_mod_cast h)
 
 lemma nat_floor_lt_nat_ceil_of_lt_of_pos {x y : α} (h : x < y) (h' : 0 < y) :
-  nat_floor x < nat_ceil y :=
+  ⌊x⌋₊ < ⌈y⌉₊ :=
 begin
   rcases le_or_lt 0 x with hx|hx,
   { rw nat_floor_lt_iff hx, exact h.trans_le (le_nat_ceil _) },
