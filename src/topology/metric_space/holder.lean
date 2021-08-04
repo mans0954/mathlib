@@ -114,7 +114,7 @@ lemma comp_holder_with {Cg rg : ℝ≥0} {g : Y → Z} {t : set Y} (hg : holder_
   holder_with (Cg * Cf ^ (rg : ℝ)) (rg * rf) (g ∘ f) :=
 holder_on_with_univ.mp $ hg.comp (hf.holder_on_with univ) (λ x _, ht x)
 
-/-- A Hölder continuouf sunction is uniformly continuous -/
+/-- A Hölder continuous function is uniformly continuous -/
 protected lemma uniform_continuous_on (hf : holder_on_with C r f s) (h0 : 0 < r) :
   uniform_continuous_on f s :=
 begin
@@ -183,7 +183,7 @@ lemma comp_holder_on_with {Cg rg : ℝ≥0} {g : Y → Z} (hg : holder_with Cg r
   holder_on_with (Cg * Cf ^ (rg : ℝ)) (rg * rf) (g ∘ f) s :=
 (hg.holder_on_with univ).comp hf (λ _ _, trivial)
 
-/-- A Hölder continuouf sunction is uniformly continuous -/
+/-- A Hölder continuous function is uniformly continuous -/
 protected lemma uniform_continuous (hf : holder_with C r f) (h0 : 0 < r) : uniform_continuous f :=
 uniform_continuous_on_univ.mp $ (hf.holder_on_with univ).uniform_continuous_on h0
 
