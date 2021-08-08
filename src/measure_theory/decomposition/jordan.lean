@@ -27,13 +27,16 @@ let ⟨i, hi, his, hit⟩ := h in
 def positive_to_measure_of_measure (s : signed_measure α)
   (i : set α) (hi₁ : measurable_set i) (hi₂ : 0 ≤[i] s)
   (j : set α) (hj₁ : measurable_set j) : ℝ≥0∞ :=
-some ⟨s (i ∩ j), nonneg_of_zero_le_restrict
-  (positive_subset_positive hi₂ $ set.inter_subset_left _ _)⟩
+some ⟨s (i ∩ j),
+begin
+  rw [set.inter_comm, ← s.restrict_apply hi₁ hj₁],
+  exact le_trans (by simp) (hi₂ j hj₁),
+end⟩
 
 /-- Given a signed measure `s` and a positive measurable set `i`, `positive_to_measure`
 provides the measure mapping measurable sets `j` to `s (i ∩ j)`. -/
 def positive_to_measure (s : signed_measure α)
-  (i : set α) (hi₁ : measurable_set i) (hi₂ : s.positive i) : measure α :=
+  (i : set α) (hi₁ : measurable_set i) (hi₂ : 0 ≤[i] s) : measure α :=
 measure.of_measurable (s.positive_to_measure_of_measure i hi₁ hi₂)
   (by { simp_rw [positive_to_measure_of_measure, set.inter_empty i, s.measure_of_empty], refl })
   begin
