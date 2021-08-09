@@ -95,7 +95,8 @@ end coprime_ints
   is_coprime := begin
     use [- g 0 1, g 0 0],
     have := det_fin_two g,
-    have := g.det_coe_fun,
+    have := g.det_coe,
+    simp at *,
     linarith
   end }
 
@@ -235,14 +236,13 @@ begin
         matrix.cons_dot_product, matrix.cons_mul_vec, matrix.cons_val_zero,
         matrix.dot_product_empty, matrix.empty_mul_vec, matrix.map_apply, mul_eq_mul_left_iff,
         neg_mul_eq_neg_mul_symm, true_or, acbd, matrix.coord, matrix.vec_head,
-        matrix.vec_tail],
-      refl },
+        matrix.vec_tail] },
     { simp only [← hg, vec_head, vec_tail, add_zero, function.comp_app, gsmul_eq_mul,
         linear_map.add_apply, linear_map.smul_apply, matrix.cons_dot_product, matrix.cons_mul_vec,
         matrix.cons_val_fin_one, matrix.cons_val_one, matrix.dot_product_empty,
         matrix.empty_mul_vec, matrix.map_apply, acbd],
       norm_cast,
-      convert g.det_coe_matrix.symm using 1,
+      convert g.det_coe.symm using 1,
       simp only [fin.coe_succ, fin.coe_zero, fin.default_eq_zero, fin.succ_succ_above_zero,
         fin.succ_zero_eq_one, fin.sum_univ_succ, fin.zero_succ_above, finset.sum_singleton,
         matrix.det_fin_zero, matrix.det_succ_row_zero, matrix.minor_apply, matrix.minor_empty,
@@ -381,7 +381,7 @@ begin
     { contrapose! hg',
       refine ⟨T * g, _, _⟩,
       { -- `bottom_row (T * g) = bottom_row g`.  Prove by a big (slow) `simp`
-        simp only [bottom_row, T, vec_head, vec_tail, special_linear_group.mul_apply, mul_apply',
+        simp only [bottom_row, T, vec_head, vec_tail, special_linear_group.coe_mul, mul_apply',
         cons_apply_one, cons_val_fin_one, cons_dot_product, dot_product_empty, function.comp_app,
         fin.succ_zero_eq_one, zero_mul, one_mul, add_zero, zero_add, eq_self_iff_true, and_self] },
       rw mul_action.mul_smul,
