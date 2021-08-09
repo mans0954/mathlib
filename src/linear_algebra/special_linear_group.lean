@@ -221,17 +221,17 @@ subtype.ext $ (@ring_hom.map_matrix n _ _ _ _ _ _ (int.cast_ring_hom R)).map_neg
 end has_neg
 
 -- this section should be last to ensure we do not use it in lemmas
--- section coe_fn_instance
+section coe_fn_instance
 
--- /-- This instance is here for convenience, but is not the simp-normal form. -/
--- instance : has_coe_to_fun (special_linear_group n R) :=
--- { F   := λ _, n → n → R,
---   coe := λ A, A.val }
+/-- This instance is here for convenience, but is not the simp-normal form. -/
+instance : has_coe_to_fun (special_linear_group n R) :=
+{ F   := λ _, n → n → R,
+  coe := λ A, A.val }
 
--- @[simp]
--- lemma coe_fn_eq_coe (s : special_linear_group n R) : ⇑s = (s : matrix n n R) := rfl
+@[simp]
+lemma coe_fn_eq_coe (s : special_linear_group n R) : ⇑s = (↑ₘs : matrix n n R) := rfl
 
--- end coe_fn_instance
+end coe_fn_instance
 
 end special_linear_group
 
